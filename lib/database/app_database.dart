@@ -169,42 +169,6 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<List<models.ActivityRecord>> getRecordsBetween(
-    DateTime start,
-    DateTime end,
-  ) async {
-    final startDate = DateTime(start.year, start.month, start.day);
-    final endDate = DateTime(end.year, end.month, end.day, 23, 59, 59);
-
-    final query = select(activityRecords).join([
-      innerJoin(
-        activityTypes,
-        activityTypes.id.equalsExp(activityRecords.activityTypeId),
-      ),
-    ])
-      ..where(activityRecords.date.isBetweenValues(startDate, endDate))
-      ..orderBy([
-        OrderingTerm.asc(activityRecords.date),
-        OrderingTerm.asc(activityTypes.sortOrder),
-      ]);
-
-    final rows = await query.get();
-
-    return rows
-        .map(
-          (row) => models.ActivityRecord(
-            id: row.readTable(activityRecords).id,
-            date: row.readTable(activityRecords).date,
-            activityTypeId: row.readTable(activityRecords).activityTypeId,
-            activityTypeName: row.readTable(activityTypes).name,
-            count: row.readTable(activityRecords).count,
-            content: row.readTable(activityRecords).content,
-            createdAt: row.readTable(activityRecords).createdAt,
-          ),
-        )
-        .toList();
-  }
-
   Future<ActivityPeriodSummary> getPeriodSummary(
     DateTime start,
     DateTime end,
@@ -243,5 +207,80 @@ class AppDatabase extends _$AppDatabase {
       totalRecords: records.length,
       totalCount: records.fold<int>(0, (sum, record) => sum + record.count),
     );
+  }
+
+  Future<List<models.ActivityRecord>> getRecordsBetween(
+    DateTime start,
+    DateTime end, {
+    String? activityTypeId,
+  }) async {
+    final startDate = DateTime(start.year, start.month, start.day);
+    final endDate = DateTime(end.year, end.month, end.day, 23, 59, 59);
+
+    final query = select(activityRecords).join([
+      innerJoin(
+        activityTypes,
+        activityTypes.id.equalsExp(activityRecords.activityTypeId),
+      ),
+    ])
+      ..where(activityRecords.date.isBetweenValues(startDate, endDate));
+
+    if (activityTypeId != null) {
+      query.where(activityRecords.activityTypeId.equals(activityTypeId));
+    }
+
+    query.orderBy([
+      OrderingTerm.asc(activityRecords.date),
+      OrderingTerm.asc(activityTypes.sortOrder),
+    ]);
+
+    final rows = await query.get();
+
+    return rows
+        .map(
+          (row) => models.ActivityRecord(
+            id: row.readTable(activityRecords).id,
+            date: row.readTable(activityRecords).date,
+            activityTypeId: row.readTable(activityRecords).activityTypeId,
+            activityTypeName: row.readTable(activityTypes).name,
+            count: row.readTable(activityRecords).count,
+            content: row.readTable(activityRecords).content,
+            createdAt: row.readTable(activityRecords).createdAt,
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> updateActivityRecord({
+    required String id,
+    required DateTime date,
+    required int count,
+    required String content,
+  }) async {
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+
+    final updated = await (update(activityRecords)
+          ..where((table) => table.id.equals(id)))
+        .write(
+      ActivityRecordsCompanion(
+        date: Value(normalizedDate),
+        count: Value(count),
+        content: Value(content.trim()),
+      ),
+    );
+
+    if (updated == 0) {
+      throw StateError('기록을 찾을 수 없습니다.');
+    }
+  }
+
+  Future<void> deleteActivityRecord(String id) async {
+    final deleted = await (delete(activityRecords)
+          ..where((table) => table.id.equals(id)))
+        .go();
+
+    if (deleted == 0) {
+      throw StateError('기록을 찾을 수 없습니다.');
+    }
   }
 }

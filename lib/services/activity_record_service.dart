@@ -24,4 +24,34 @@ class ActivityRecordService {
   Future<ActivityPeriodSummary> getSummary(DateTime start, DateTime end) {
     return _database.getPeriodSummary(start, end);
   }
+
+  Future<List<ActivityRecord>> getByType({
+    required String activityTypeId,
+    required DateTime start,
+    required DateTime end,
+  }) {
+    return _database.getRecordsBetween(
+      start,
+      end,
+      activityTypeId: activityTypeId,
+    );
+  }
+
+  Future<void> update({
+    required String id,
+    required DateTime date,
+    required int count,
+    required String content,
+  }) {
+    return _database.updateActivityRecord(
+      id: id,
+      date: date,
+      count: count,
+      content: content,
+    );
+  }
+
+  Future<void> delete(String id) {
+    return _database.deleteActivityRecord(id);
+  }
 }

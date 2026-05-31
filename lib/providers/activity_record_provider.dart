@@ -86,6 +86,13 @@ class InquiryNotifier extends Notifier<InquiryState> {
       );
     }
   }
+
+  Future<void> refreshIfLoaded() async {
+    if (state.summary == null || state.startDate == null || state.endDate == null) {
+      return;
+    }
+    await search();
+  }
 }
 
 final recordSaveProvider =

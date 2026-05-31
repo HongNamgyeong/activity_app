@@ -22,7 +22,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('활동기록'), findsWidgets);
-    expect(find.text('오늘의 활동을 기록합니다'), findsOneWidget);
+    expect(find.text('활동조회'), findsWidgets);
+    expect(find.text('기간별 활동 내역을 확인하세요'), findsOneWidget);
   });
 }
