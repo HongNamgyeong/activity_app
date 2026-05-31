@@ -5,10 +5,37 @@ import '../models/activity_summary.dart';
 import 'donut_chart.dart';
 
 String inferActivityCategory(String name) {
-  if (name.contains('기도') || name.contains('묵주')) return '기도';
-  if (name.contains('봉사')) return '봉사';
-  if (name.contains('방문') || name.contains('환자')) return '방문';
-  if (name.contains('회합')) return '회합';
+  if (name.contains('기도') ||
+      name.contains('묵주') ||
+      name.contains('미사') ||
+      name.contains('시복') ||
+      name.contains('청원') ||
+      name.contains('성화') ||
+      name.contains('성경') ||
+      name.contains('성체') ||
+      name.contains('십자가') ||
+      name.contains('소성무') ||
+      name.contains('아침저녁')) {
+    return '기도';
+  }
+  if (name.contains('봉사') ||
+      name.contains('전례') ||
+      name.contains('환경')) {
+    return '봉사';
+  }
+  if (name.contains('방문') ||
+      name.contains('환자') ||
+      name.contains('교우') ||
+      name.contains('비신자') ||
+      name.contains('성지')) {
+    return '방문';
+  }
+  if (name.contains('회합') ||
+      name.contains('행사') ||
+      name.contains('본당') ||
+      name.contains('연도')) {
+    return '회합';
+  }
   return '기타';
 }
 

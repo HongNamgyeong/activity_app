@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
+import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../providers/activity_type_provider.dart';
+import '../providers/backup_provider.dart';
 import '../widgets/app_card.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -14,11 +17,84 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _addController = TextEditingController();
+  DateTime? _lastBackupTime;
+  bool _backupBusy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastBackupTime();
+  }
 
   @override
   void dispose() {
     _addController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadLastBackupTime() async {
+    final time = await ref.read(backupServiceProvider).lastBackupTime();
+    if (mounted) {
+      setState(() => _lastBackupTime = time);
+    }
+  }
+
+  Future<void> _runBackup() async {
+    setState(() => _backupBusy = true);
+    try {
+      final time = await ref.read(backupServiceProvider).writeBackup();
+      if (mounted) {
+        setState(() => _lastBackupTime = time);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('백업 파일을 저장했습니다.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('백업 실패: $error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _backupBusy = false);
+      }
+    }
+  }
+
+  Future<void> _runRestore({required bool force}) async {
+    setState(() => _backupBusy = true);
+    try {
+      final restored = await ref
+          .read(backupServiceProvider)
+          .restoreFromBackupFile(force: force);
+      if (!mounted) return;
+
+      if (restored) {
+        await ref.read(activityTypesProvider.notifier).refresh();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('백업에서 데이터를 복원했습니다.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('복원할 백업이 없거나, 이미 최신 데이터입니다.'),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('복원 실패: $error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _backupBusy = false);
+        await _loadLastBackupTime();
+      }
+    }
   }
 
   Future<void> _addType() async {
@@ -94,6 +170,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     subtitle: '활동 보고에 사용될 카테고리를 관리합니다',
                   ),
                   const SizedBox(height: 24),
+                  const SectionTitle(title: '데이터 백업'),
+                  const SizedBox(height: 12),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          '기록은 기기 안에 저장됩니다. 앱을 삭제하면 기본적으로 초기화되지만, '
+                          '자동 백업 파일(Android: 다운로드 폴더의 ${AppConstants.backupFileName})과 '
+                          'Google 계정 백업으로 재설치 후 복원을 시도합니다.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        if (_lastBackupTime != null) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            '마지막 백업: ${DateFormat('yyyy.MM.dd HH:mm').format(_lastBackupTime!)}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.accent,
+                                ),
+                          ),
+                        ],
+                        const SizedBox(height: 14),
+                        FilledButton(
+                          onPressed: _backupBusy ? null : _runBackup,
+                          child: _backupBusy
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('지금 백업하기'),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: _backupBusy
+                              ? null
+                              : () => _runRestore(force: false),
+                          child: const Text('백업에서 복원'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   SectionTitle(
                     title: '현재 활동 목록',
                     trailing: Text(
@@ -148,7 +267,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         child: TextField(
                           controller: _addController,
                           decoration: const InputDecoration(
-                            hintText: '예: 성경 봉독',
+                            hintText: '예: 묵주기도',
                             contentPadding: EdgeInsets.symmetric(
                               horizontal: 14,
                               vertical: 14,

@@ -62,48 +62,87 @@ class _CountStepperState extends State<CountStepper> {
   @override
   Widget build(BuildContext context) {
     if (widget.compact) {
-      return Row(
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            width: 64,
-            child: TextField(
-              controller: _controller,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-              decoration: const InputDecoration(
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 10),
+          Container(
+            width: 112,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.inputBackground,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.accent.withValues(alpha: 0.55),
+                width: 1.5,
               ),
-              onSubmitted: _applyText,
-              onEditingComplete: () => _applyText(_controller.text),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 22,
+                        ),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onSubmitted: _applyText,
+                    onEditingComplete: () => _applyText(_controller.text),
+                  ),
+                ),
+                Text(
+                  '회',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          _CompactStepButton(
-            label: '-5',
-            onPressed: () => _update(widget.value - 5),
-          ),
-          const SizedBox(width: 6),
-          _CompactStepButton(
-            label: '-1',
-            onPressed: () => _update(widget.value - 1),
-          ),
-          const SizedBox(width: 6),
-          _CompactStepButton(
-            label: '+1',
-            onPressed: () => _update(widget.value + 1),
-            filled: true,
-          ),
-          const SizedBox(width: 6),
-          _CompactStepButton(
-            label: '+5',
-            onPressed: () => _update(widget.value + 5),
-            filled: true,
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _CompactStepButton(
+                  label: '-5',
+                  onPressed: () => _update(widget.value - 5),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _CompactStepButton(
+                  label: '-1',
+                  onPressed: () => _update(widget.value - 1),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _CompactStepButton(
+                  label: '+1',
+                  onPressed: () => _update(widget.value + 1),
+                  filled: true,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _CompactStepButton(
+                  label: '+5',
+                  onPressed: () => _update(widget.value + 5),
+                  filled: true,
+                ),
+              ),
+            ],
           ),
         ],
       );
@@ -198,22 +237,31 @@ class _CompactStepButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: filled ? AppColors.accent : AppColors.surfaceElevated,
-      borderRadius: BorderRadius.circular(8),
+      color: filled
+          ? AppColors.accent.withValues(alpha: 0.2)
+          : Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         onTap: onPressed,
-        child: SizedBox(
-          width: 40,
-          height: 40,
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                color: filled ? const Color(0xFF1E1B4B) : AppColors.textPrimary,
-              ),
+        child: Container(
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: filled
+                  ? AppColors.accent.withValues(alpha: 0.7)
+                  : AppColors.border,
+              width: 1,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: filled ? AppColors.accent : AppColors.textSecondary,
             ),
           ),
         ),

@@ -111,21 +111,20 @@ class _DetailItemCard extends StatelessWidget {
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.activityTypeName,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${item.totalCount} 회/시간',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
+                child: Text(
+                  item.activityTypeName,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
+              const SizedBox(width: 12),
+              Text(
+                '${item.totalCount}회',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 20,
+                    ),
+              ),
+              const SizedBox(width: 8),
               const Icon(
                 Icons.chevron_right,
                 color: AppColors.textMuted,

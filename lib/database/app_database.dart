@@ -40,13 +40,21 @@ class AppDatabase extends _$AppDatabase {
   static const _uuid = Uuid();
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (Migrator migrator) async {
           await migrator.createAll();
           await _seedDefaultActivityTypes();
+        },
+        onUpgrade: (Migrator migrator, int from, int to) async {
+          if (from < 2) {
+            await _migrateDefaultActivityTypesV2();
+          }
+          if (from < 3) {
+            await _migrateDefaultActivityTypesV3();
+          }
         },
       );
 
@@ -60,10 +68,14 @@ class AppDatabase extends _$AppDatabase {
       return;
     }
 
+    await _insertDefaultActivityTypes(AppConstants.defaultActivityTypes);
+  }
+
+  Future<void> _insertDefaultActivityTypes(List<String> names) async {
     await batch((batch) {
       batch.insertAll(
         activityTypes,
-        AppConstants.defaultActivityTypes.asMap().entries.map(
+        names.asMap().entries.map(
           (entry) => ActivityTypesCompanion.insert(
             id: _uuid.v4(),
             name: entry.value,
@@ -72,6 +84,45 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
     });
+  }
+
+  /// 예전 기본 6개만 그대로 쓰는 DB는 새 기본 목록으로 교체합니다.
+  Future<void> _migrateDefaultActivityTypesV2() async {
+    await _replacePresetActivityTypesIfAllowed(
+      AppConstants.legacyDefaultActivityTypes.toSet(),
+    );
+  }
+
+  /// v2 기본 7개 프리셋만 있는 DB는 테스트 기준 전체 기본 목록으로 교체합니다.
+  Future<void> _migrateDefaultActivityTypesV3() async {
+    await _replacePresetActivityTypesIfAllowed(
+      AppConstants.previousDefaultActivityTypesV2.toSet(),
+    );
+  }
+
+  Future<void> _replacePresetActivityTypesIfAllowed(Set<String> presetNames) async {
+    final rows = await select(activityTypes).get();
+    if (rows.isEmpty) {
+      await _insertDefaultActivityTypes(AppConstants.defaultActivityTypes);
+      return;
+    }
+
+    final names = rows.map((row) => row.name).toSet();
+    final isUnmodifiedPreset =
+        names.length == presetNames.length && names.containsAll(presetNames);
+
+    if (!isUnmodifiedPreset) {
+      return;
+    }
+
+    final recordCount =
+        await select(activityRecords).get().then((records) => records.length);
+    if (recordCount > 0) {
+      return;
+    }
+
+    await delete(activityTypes).go();
+    await _insertDefaultActivityTypes(AppConstants.defaultActivityTypes);
   }
 
   Future<List<models.ActivityType>> getAllActivityTypes() async {
@@ -283,4 +334,126 @@ class AppDatabase extends _$AppDatabase {
       throw StateError('기록을 찾을 수 없습니다.');
     }
   }
+
+  Future<int> activityRecordCount() {
+    return select(activityRecords).get().then((rows) => rows.length);
+  }
+
+  Future<AppDataBackup> exportBackupData() async {
+    final typeRows = await (select(activityTypes)
+          ..orderBy([(table) => OrderingTerm.asc(table.sortOrder)]))
+        .get();
+    final recordRows = await select(activityRecords).get();
+
+    return AppDataBackup(
+      exportedAt: DateTime.now().toUtc(),
+      types: typeRows
+          .map(
+            (row) => BackupActivityType(
+              id: row.id,
+              name: row.name,
+              sortOrder: row.sortOrder,
+            ),
+          )
+          .toList(),
+      records: recordRows
+          .map(
+            (row) => BackupActivityRecord(
+              id: row.id,
+              date: row.date,
+              activityTypeId: row.activityTypeId,
+              count: row.count,
+              content: row.content,
+              createdAt: row.createdAt,
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Future<void> importBackupData(AppDataBackup backup) async {
+    if (backup.types.isEmpty) {
+      throw StateError('백업에 활동 목록이 없습니다.');
+    }
+
+    await transaction(() async {
+      await delete(activityRecords).go();
+      await delete(activityTypes).go();
+
+      await batch((batch) {
+        batch.insertAll(
+          activityTypes,
+          backup.types
+              .map(
+                (type) => ActivityTypesCompanion.insert(
+                  id: type.id,
+                  name: type.name,
+                  sortOrder: Value(type.sortOrder),
+                ),
+              )
+              .toList(),
+        );
+
+        if (backup.records.isNotEmpty) {
+          batch.insertAll(
+            activityRecords,
+            backup.records
+                .map(
+                  (record) => ActivityRecordsCompanion.insert(
+                    id: record.id,
+                    date: record.date,
+                    activityTypeId: record.activityTypeId,
+                    count: Value(record.count),
+                    content: Value(record.content),
+                    createdAt: record.createdAt,
+                  ),
+                )
+                .toList(),
+          );
+        }
+      });
+    });
+  }
+}
+
+class AppDataBackup {
+  const AppDataBackup({
+    required this.exportedAt,
+    required this.types,
+    required this.records,
+  });
+
+  final DateTime exportedAt;
+  final List<BackupActivityType> types;
+  final List<BackupActivityRecord> records;
+}
+
+class BackupActivityType {
+  const BackupActivityType({
+    required this.id,
+    required this.name,
+    required this.sortOrder,
+  });
+
+  final String id;
+  final String name;
+  final int sortOrder;
+}
+
+class BackupActivityRecord {
+  const BackupActivityRecord({
+    required this.id,
+    required this.date,
+    required this.activityTypeId,
+    required this.count,
+    required this.content,
+    required this.createdAt,
+  });
+
+  final String id;
+  final DateTime date;
+  final String activityTypeId;
+  final int count;
+  final String content;
+  final DateTime createdAt;
 }

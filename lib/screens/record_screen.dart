@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-
 import '../core/theme/app_colors.dart';
 import '../models/activity_type.dart';
 import '../providers/activity_record_provider.dart';
 import '../providers/activity_type_provider.dart';
 import '../widgets/app_card.dart';
 import '../widgets/count_stepper.dart';
+import '../widgets/record_date_picker.dart';
 
 class RecordScreen extends ConsumerStatefulWidget {
   const RecordScreen({super.key});
@@ -17,11 +16,16 @@ class RecordScreen extends ConsumerStatefulWidget {
 }
 
 class _RecordScreenState extends ConsumerState<RecordScreen> {
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate = _today;
+
+  static DateTime get _today {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
   String? _selectedTypeId;
   int _count = 0;
   final _contentController = TextEditingController();
-  final _headerDateFormat = DateFormat('yyyy년 M월 d일 (E)', 'ko_KR');
 
   @override
   void dispose() {
@@ -37,33 +41,6 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
       return _selectedTypeId;
     }
     return types.first.id;
-  }
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2035),
-      locale: const Locale('ko', 'KR'),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.accent,
-              onPrimary: Color(0xFF1E1B4B),
-              surface: AppColors.surface,
-              onSurface: AppColors.textPrimary,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() => _selectedDate = picked);
-    }
   }
 
   Future<void> _save(List<ActivityType> types) async {
@@ -103,7 +80,12 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+        ),
+      );
   }
 
   @override
@@ -121,42 +103,20 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             children: [
               Text(
-                _headerDateFormat.format(_selectedDate),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 4),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      '활동기록',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                  ),
-                  Material(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(24),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(24),
-                      onTap: _pickDate,
-                      child: const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: Icon(
-                          Icons.church_outlined,
-                          color: AppColors.textPrimary,
-                          size: 22,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                '활동기록',
+                style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 20),
               AppCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    RecordDatePicker(
+                      selectedDate: _selectedDate,
+                      onDateChanged: (date) =>
+                          setState(() => _selectedDate = date),
+                    ),
+                    const SizedBox(height: 20),
                     Text(
                       '활동 항목',
                       style: Theme.of(context).textTheme.bodySmall,

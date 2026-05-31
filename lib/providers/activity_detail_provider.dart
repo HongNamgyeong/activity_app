@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/activity_record.dart';
 import '../models/activity_summary.dart';
 import 'activity_record_provider.dart';
+import 'backup_provider.dart';
 import 'navigation_provider.dart';
 
 class ActivityDetailState {
@@ -114,6 +115,7 @@ class ActivityDetailNotifier extends Notifier<ActivityDetailState> {
 
   Future<void> deleteRecord(String id) async {
     await ref.read(activityRecordServiceProvider).delete(id);
+    await scheduleDataBackup(ref);
     await reload();
     await ref.read(inquiryProvider.notifier).refreshIfLoaded();
   }
@@ -130,6 +132,7 @@ class ActivityDetailNotifier extends Notifier<ActivityDetailState> {
           count: count,
           content: content,
         );
+    await scheduleDataBackup(ref);
     await reload();
     await ref.read(inquiryProvider.notifier).refreshIfLoaded();
   }

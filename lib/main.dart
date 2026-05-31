@@ -5,14 +5,25 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
+import 'database/app_database.dart';
+import 'providers/database_provider.dart';
 import 'screens/main_shell.dart';
+import 'services/backup_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ko_KR');
+
+  final database = AppDatabase();
+  await BackupService(database).tryRestoreFromPersistentBackupIfNeeded();
+  await BackupService(database).writeBackup();
+
   runApp(
-    const ProviderScope(
-      child: LegioActivityApp(),
+    ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(database),
+      ],
+      child: const LegioActivityApp(),
     ),
   );
 }
