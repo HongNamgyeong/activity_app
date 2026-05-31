@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../core/theme/app_colors.dart';
+import '../models/activity_type.dart';
 import '../providers/activity_record_provider.dart';
 import '../providers/activity_type_provider.dart';
 import '../widgets/app_card.dart';
@@ -26,6 +27,16 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
   void dispose() {
     _contentController.dispose();
     super.dispose();
+  }
+
+  /// 목록에 없는(삭제된) ID가 남아 있으면 첫 항목 또는 null로 정규화합니다.
+  String? _resolveTypeId(List<ActivityType> types) {
+    if (types.isEmpty) return null;
+    if (_selectedTypeId != null &&
+        types.any((type) => type.id == _selectedTypeId)) {
+      return _selectedTypeId;
+    }
+    return types.first.id;
   }
 
   Future<void> _pickDate() async {
@@ -55,9 +66,8 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
     }
   }
 
-  Future<void> _save() async {
-    final types = ref.read(activityTypesProvider).value ?? [];
-    final typeId = _selectedTypeId ?? (types.isNotEmpty ? types.first.id : null);
+  Future<void> _save(List<ActivityType> types) async {
+    final typeId = _resolveTypeId(types);
 
     if (typeId == null) {
       _showMessage('활동을 선택해 주세요.');
@@ -104,8 +114,7 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Center(child: Text(error.toString())),
       data: (types) {
-        final selectedTypeId =
-            _selectedTypeId ?? (types.isNotEmpty ? types.first.id : null);
+        final effectiveTypeId = _resolveTypeId(types);
 
         return SafeArea(
           child: ListView(
@@ -153,25 +162,11 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      key: ValueKey(selectedTypeId),
-                      initialValue: selectedTypeId,
-                      hint: const Text('활동 유형을 선택하세요'),
-                      decoration: const InputDecoration(
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      ),
-                      items: types
-                          .map(
-                            (type) => DropdownMenuItem(
-                              value: type.id,
-                              child: Text(type.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: types.isEmpty
-                          ? null
-                          : (value) => setState(() => _selectedTypeId = value),
+                    _ActivityTypeDropdown(
+                      types: types,
+                      selectedId: effectiveTypeId,
+                      onChanged: (value) =>
+                          setState(() => _selectedTypeId = value),
                     ),
                     if (types.isEmpty) ...[
                       const SizedBox(height: 8),
@@ -212,7 +207,7 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
               ),
               const SizedBox(height: 20),
               FilledButton.icon(
-                onPressed: types.isEmpty ? null : _save,
+                onPressed: types.isEmpty ? null : () => _save(types),
                 icon: const Icon(Icons.save_outlined),
                 label: const Text('활동 기록 저장'),
               ),
@@ -238,6 +233,67 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+/// DropdownButtonFormField의 initialValue 오류를 피하기 위해
+/// 항상 목록에 존재하는 value만 사용하는 드롭다운입니다.
+class _ActivityTypeDropdown extends StatelessWidget {
+  const _ActivityTypeDropdown({
+    required this.types,
+    required this.selectedId,
+    required this.onChanged,
+  });
+
+  final List<ActivityType> types;
+  final String? selectedId;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    if (types.isEmpty) {
+      return InputDecorator(
+        decoration: const InputDecoration(
+          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
+        child: Text(
+          '활동 유형을 선택하세요',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textMuted,
+              ),
+        ),
+      );
+    }
+
+    final items = types
+        .map(
+          (type) => DropdownMenuItem<String>(
+            value: type.id,
+            child: Text(type.name),
+          ),
+        )
+        .toList();
+
+    final value = selectedId != null &&
+            items.any((item) => item.value == selectedId)
+        ? selectedId
+        : items.first.value;
+
+    return InputDecorator(
+      decoration: const InputDecoration(
+        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          hint: const Text('활동 유형을 선택하세요'),
+          dropdownColor: AppColors.surfaceElevated,
+          items: items,
+          onChanged: onChanged,
+        ),
+      ),
     );
   }
 }
