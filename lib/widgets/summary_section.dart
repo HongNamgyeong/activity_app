@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/utils/activity_value_format.dart';
+import '../models/activity_measure_type.dart';
 import '../models/activity_summary.dart';
 import 'activity_category_utils.dart';
 import 'app_card.dart';
-import 'donut_chart.dart';
 
 typedef SummaryItemTap = void Function(ActivitySummaryItem item);
 
@@ -40,8 +41,6 @@ class SummarySection extends StatelessWidget {
       );
     }
 
-    final chartSegments = buildCategorySegments(summary.items);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -55,17 +54,7 @@ class SummarySection extends StatelessWidget {
                 ),
           ),
         ),
-        const SizedBox(height: 12),
-        AppCard(
-          child: Column(
-            children: [
-              DonutChart(segments: chartSegments),
-              const SizedBox(height: 20),
-              ChartLegend(segments: chartSegments),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         Text('항목별 상세', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
         ...summary.items.map(
@@ -118,7 +107,9 @@ class _DetailItemCard extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                '${item.totalCount}회',
+                item.measureType == ActivityMeasureType.time
+                    ? formatTotalTimeValue(item.totalCount)
+                    : '${item.totalCount}회',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                       fontSize: 20,

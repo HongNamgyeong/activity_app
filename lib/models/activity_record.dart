@@ -1,3 +1,5 @@
+import 'activity_measure_type.dart';
+
 class ActivityRecord {
   const ActivityRecord({
     required this.id,
@@ -7,6 +9,8 @@ class ActivityRecord {
     required this.count,
     required this.content,
     required this.createdAt,
+    this.measureType = ActivityMeasureType.count,
+    this.timeUnit,
   });
 
   final String id;
@@ -16,4 +20,6 @@ class ActivityRecord {
   final int count;
   final String content;
   final DateTime createdAt;
+  final ActivityMeasureType measureType;
+  final ActivityTimeUnit? timeUnit;
 }

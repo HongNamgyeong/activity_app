@@ -24,7 +24,7 @@ class MainShell extends ConsumerWidget {
     ];
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: SystemUiOverlayStyle.dark,
       child: Scaffold(
         body: IndexedStack(
           index: currentIndex,

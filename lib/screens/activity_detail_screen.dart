@@ -3,10 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/utils/activity_value_format.dart';
+import '../models/activity_measure_type.dart';
 import '../models/activity_record.dart';
 import '../providers/activity_detail_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../widgets/app_card.dart';
+import '../widgets/count_stepper.dart';
+import '../widgets/time_stepper.dart';
 
 class ActivityDetailScreen extends ConsumerWidget {
   const ActivityDetailScreen({super.key});
@@ -114,7 +118,7 @@ class ActivityDetailScreen extends ConsumerWidget {
               onPressed: () =>
                   ref.read(mainTabIndexProvider.notifier).select(1),
               backgroundColor: AppColors.accent,
-              foregroundColor: const Color(0xFF1E1B4B),
+              foregroundColor: AppColors.onAccent,
               icon: const Icon(Icons.add),
               label: const Text('기록 추가'),
             ),
@@ -165,9 +169,12 @@ class ActivityDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     ActivityRecord record,
   ) async {
+    final detail = ref.read(activityDetailProvider);
     final contentController = TextEditingController(text: record.content);
     var count = record.count;
     var date = record.date;
+    var timeUnit = record.timeUnit ?? ActivityTimeUnit.minute;
+    final isTimeType = detail.measureType == ActivityMeasureType.time;
 
     final saved = await showDialog<bool>(
       context: context,
@@ -204,23 +211,24 @@ class ActivityDetailScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Text('횟수'),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: count > 1
-                          ? () => setDialogState(() => count--)
-                          : null,
-                      icon: const Icon(Icons.remove_circle_outline),
-                    ),
-                    Text('$count'),
-                    IconButton(
-                      onPressed: () => setDialogState(() => count++),
-                      icon: const Icon(Icons.add_circle_outline),
-                    ),
-                  ],
-                ),
+                Text(isTimeType ? '시간' : '횟수'),
+                const SizedBox(height: 8),
+                if (isTimeType)
+                  TimeStepper(
+                    value: count,
+                    timeUnit: timeUnit,
+                    min: 1,
+                    onValueChanged: (value) =>
+                        setDialogState(() => count = value),
+                    onTimeUnitChanged: (unit) =>
+                        setDialogState(() => timeUnit = unit),
+                  )
+                else
+                  CountStepper(
+                    value: count,
+                    min: 1,
+                    onChanged: (value) => setDialogState(() => count = value),
+                  ),
               ],
             ),
           ),
@@ -245,6 +253,7 @@ class ActivityDetailScreen extends ConsumerWidget {
               date: date,
               count: count,
               content: contentController.text,
+              timeUnit: isTimeType ? timeUnit : null,
             );
       } catch (error) {
         if (context.mounted) {
@@ -271,8 +280,9 @@ class _SummaryHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.accent,
+        color: AppColors.headerSurface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -283,7 +293,7 @@ class _SummaryHeader extends StatelessWidget {
                 child: Text(
                   dateRange,
                   style: const TextStyle(
-                    color: Color(0xFF1E1B4B),
+                    color: AppColors.headerTextMuted,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -291,7 +301,7 @@ class _SummaryHeader extends StatelessWidget {
               ),
               Icon(
                 Icons.calendar_month_outlined,
-                color: const Color(0xFF1E1B4B).withValues(alpha: 0.7),
+                color: AppColors.headerTextMuted.withValues(alpha: 0.8),
                 size: 20,
               ),
             ],
@@ -300,7 +310,7 @@ class _SummaryHeader extends StatelessWidget {
           Text(
             detail.activityTypeName ?? '',
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.textPrimary,
               fontSize: 26,
               fontWeight: FontWeight.w700,
             ),
@@ -309,19 +319,19 @@ class _SummaryHeader extends StatelessWidget {
           RichText(
             text: TextSpan(
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.textSecondary,
                 fontSize: 15,
               ),
               children: [
                 TextSpan(
-                  text: '${detail.totalCount}',
+                  text: detail.totalCountLabel,
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.chartService,
+                    color: AppColors.headerHighlight,
                   ),
                 ),
-                const TextSpan(text: '회 실시됨'),
+                const TextSpan(text: ' 실시됨'),
               ],
             ),
           ),
@@ -406,7 +416,11 @@ class _RecordCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                '${record.count}회',
+                formatRecordValue(
+                  count: record.count,
+                  measureType: record.measureType,
+                  timeUnit: record.timeUnit,
+                ),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ],
@@ -437,7 +451,7 @@ class _RecordCard extends StatelessWidget {
               IconButton(
                 onPressed: onDelete,
                 icon: const Icon(Icons.delete_outline, size: 20),
-                color: const Color(0xFFF87171),
+                color: AppColors.destructive,
                 visualDensity: VisualDensity.compact,
               ),
             ],

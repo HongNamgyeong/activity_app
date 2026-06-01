@@ -87,8 +87,20 @@ class _DonutChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutChartPainter oldDelegate) {
-    return oldDelegate.segments != segments ||
-        oldDelegate.strokeWidth != strokeWidth;
+    if (oldDelegate.strokeWidth != strokeWidth) return true;
+    if (oldDelegate.segments.length != segments.length) return true;
+
+    for (var i = 0; i < segments.length; i++) {
+      final previous = oldDelegate.segments[i];
+      final current = segments[i];
+      if (previous.label != current.label ||
+          previous.value != current.value ||
+          previous.color != current.color) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
 

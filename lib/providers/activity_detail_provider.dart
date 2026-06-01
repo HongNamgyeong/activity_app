@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/activity_value_format.dart';
+import '../models/activity_measure_type.dart';
 import '../models/activity_record.dart';
 import '../models/activity_summary.dart';
 import 'activity_record_provider.dart';
@@ -10,6 +12,7 @@ class ActivityDetailState {
   const ActivityDetailState({
     this.activityTypeId,
     this.activityTypeName,
+    this.measureType = ActivityMeasureType.count,
     this.startDate,
     this.endDate,
     this.records = const [],
@@ -19,6 +22,7 @@ class ActivityDetailState {
 
   final String? activityTypeId;
   final String? activityTypeName;
+  final ActivityMeasureType measureType;
   final DateTime? startDate;
   final DateTime? endDate;
   final List<ActivityRecord> records;
@@ -28,8 +32,17 @@ class ActivityDetailState {
   bool get hasSelection =>
       activityTypeId != null && startDate != null && endDate != null;
 
-  int get totalCount =>
-      records.fold<int>(0, (sum, record) => sum + record.count);
+  int get totalCount => records.fold<int>(
+        0,
+        (sum, record) => sum +
+            (measureType == ActivityMeasureType.time
+                ? activityValueToMinutes(record.count, record.timeUnit)
+                : record.count),
+      );
+
+  String get totalCountLabel => measureType == ActivityMeasureType.time
+      ? formatTotalTimeValue(totalCount)
+      : '$totalCount회';
 
   List<ActivityRecord> get sortedRecords {
     final copy = List<ActivityRecord>.from(records);
@@ -43,6 +56,7 @@ class ActivityDetailState {
   ActivityDetailState copyWith({
     String? activityTypeId,
     String? activityTypeName,
+    ActivityMeasureType? measureType,
     DateTime? startDate,
     DateTime? endDate,
     List<ActivityRecord>? records,
@@ -55,6 +69,9 @@ class ActivityDetailState {
           clearSelection ? null : (activityTypeId ?? this.activityTypeId),
       activityTypeName:
           clearSelection ? null : (activityTypeName ?? this.activityTypeName),
+      measureType: clearSelection
+          ? ActivityMeasureType.count
+          : (measureType ?? this.measureType),
       startDate: clearSelection ? null : (startDate ?? this.startDate),
       endDate: clearSelection ? null : (endDate ?? this.endDate),
       records: records ?? this.records,
@@ -81,6 +98,7 @@ class ActivityDetailNotifier extends Notifier<ActivityDetailState> {
     state = ActivityDetailState(
       activityTypeId: item.activityTypeId,
       activityTypeName: item.activityTypeName,
+      measureType: item.measureType,
       startDate: startDate,
       endDate: endDate,
       records: item.records,
@@ -125,12 +143,15 @@ class ActivityDetailNotifier extends Notifier<ActivityDetailState> {
     required DateTime date,
     required int count,
     required String content,
+    ActivityTimeUnit? timeUnit,
   }) async {
     await ref.read(activityRecordServiceProvider).update(
           id: id,
           date: date,
           count: count,
           content: content,
+          timeUnit: timeUnit,
+          measureType: state.measureType,
         );
     await scheduleDataBackup(ref);
     await reload();

@@ -35,7 +35,7 @@ class LegioActivityApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: AppConstants.appName,
-      theme: AppTheme.dark,
+      theme: AppTheme.light,
       locale: const Locale('ko', 'KR'),
       supportedLocales: const [Locale('ko', 'KR')],
       localizationsDelegates: const [

@@ -28,6 +28,16 @@ abstract final class AppConstants {
     '성지순례',
   ];
 
+  /// 기본 목록 중 시간 단위로 기록하는 활동
+  static const defaultTimeActivityTypes = {
+    '성경읽기',
+    '성경쓰기',
+  };
+
+  static String defaultMeasureTypeFor(String name) {
+    return defaultTimeActivityTypes.contains(name) ? 'time' : 'count';
+  }
+
   /// v1 기본 목록 (마이그레이션용)
   static const legacyDefaultActivityTypes = [
     '기도',

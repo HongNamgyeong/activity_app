@@ -24,7 +24,7 @@ class DateRangeCalendar extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.parchment,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.cardBorder),
       ),

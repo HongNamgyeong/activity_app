@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
+import '../models/activity_measure_type.dart';
 import '../models/activity_type.dart';
 import '../providers/activity_record_provider.dart';
 import '../providers/activity_type_provider.dart';
 import '../widgets/app_card.dart';
 import '../widgets/count_stepper.dart';
 import '../widgets/record_date_picker.dart';
+import '../widgets/time_stepper.dart';
 
 class RecordScreen extends ConsumerStatefulWidget {
   const RecordScreen({super.key});
@@ -25,6 +27,7 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
 
   String? _selectedTypeId;
   int _count = 0;
+  ActivityTimeUnit _timeUnit = ActivityTimeUnit.minute;
   final _contentController = TextEditingController();
 
   @override
@@ -43,24 +46,49 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
     return types.first.id;
   }
 
-  Future<void> _save(List<ActivityType> types) async {
+  ActivityType? _selectedType(List<ActivityType> types) {
     final typeId = _resolveTypeId(types);
+    if (typeId == null) return null;
+    return types.firstWhere((type) => type.id == typeId);
+  }
 
-    if (typeId == null) {
+  void _onTypeChanged(String? typeId, List<ActivityType> types) {
+    final previous = _selectedType(types);
+    setState(() {
+      _selectedTypeId = typeId;
+      final next = _selectedType(types);
+      if (previous?.id != next?.id) {
+        _count = 0;
+        _timeUnit = ActivityTimeUnit.minute;
+      }
+    });
+  }
+
+  Future<void> _save(List<ActivityType> types) async {
+    final selected = _selectedType(types);
+
+    if (selected == null) {
       _showMessage('활동을 선택해 주세요.');
       return;
     }
 
     if (_count < 1) {
-      _showMessage('횟수는 1 이상이어야 합니다.');
+      _showMessage(
+        selected.measureType == ActivityMeasureType.time
+            ? '시간은 1 이상이어야 합니다.'
+            : '횟수는 1 이상이어야 합니다.',
+      );
       return;
     }
 
     final success = await ref.read(recordSaveProvider.notifier).save(
           date: _selectedDate,
-          activityTypeId: typeId,
+          activityTypeId: selected.id,
           count: _count,
           content: _contentController.text,
+          timeUnit: selected.measureType == ActivityMeasureType.time
+              ? _timeUnit
+              : null,
         );
 
     if (!mounted) return;
@@ -68,6 +96,7 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
     if (success) {
       setState(() {
         _count = 0;
+        _timeUnit = ActivityTimeUnit.minute;
         _contentController.clear();
       });
       _showMessage('활동 기록을 저장했습니다.');
@@ -97,6 +126,9 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
       error: (error, _) => Center(child: Text(error.toString())),
       data: (types) {
         final effectiveTypeId = _resolveTypeId(types);
+        final selectedType = _selectedType(types);
+        final isTimeType =
+            selectedType?.measureType == ActivityMeasureType.time;
 
         return SafeArea(
           child: ListView(
@@ -125,8 +157,7 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
                     _ActivityTypeDropdown(
                       types: types,
                       selectedId: effectiveTypeId,
-                      onChanged: (value) =>
-                          setState(() => _selectedTypeId = value),
+                      onChanged: (value) => _onTypeChanged(value, types),
                     ),
                     if (types.isEmpty) ...[
                       const SizedBox(height: 8),
@@ -137,16 +168,27 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
                     ],
                     const SizedBox(height: 20),
                     Text(
-                      '횟수 / 시간',
+                      isTimeType ? '시간' : '횟수',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 8),
-                    CountStepper(
-                      value: _count,
-                      min: 0,
-                      compact: true,
-                      onChanged: (value) => setState(() => _count = value),
-                    ),
+                    if (isTimeType)
+                      TimeStepper(
+                        value: _count,
+                        timeUnit: _timeUnit,
+                        min: 0,
+                        onValueChanged: (value) =>
+                            setState(() => _count = value),
+                        onTimeUnitChanged: (unit) =>
+                            setState(() => _timeUnit = unit),
+                      )
+                    else
+                      CountStepper(
+                        value: _count,
+                        min: 0,
+                        compact: true,
+                        onChanged: (value) => setState(() => _count = value),
+                      ),
                     const SizedBox(height: 20),
                     Text(
                       '활동 내용 및 비고',

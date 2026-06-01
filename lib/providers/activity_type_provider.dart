@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/activity_measure_type.dart';
 import '../models/activity_type.dart';
 import '../services/activity_type_service.dart';
 import 'backup_provider.dart';
@@ -27,8 +28,14 @@ class ActivityTypesNotifier extends AsyncNotifier<List<ActivityType>> {
     );
   }
 
-  Future<void> addType(String name) async {
-    await ref.read(activityTypeServiceProvider).add(name);
+  Future<void> addType(
+    String name, {
+    ActivityMeasureType measureType = ActivityMeasureType.count,
+  }) async {
+    await ref.read(activityTypeServiceProvider).add(
+          name,
+          measureType: measureType,
+        );
     await scheduleDataBackup(ref);
     await refresh();
   }

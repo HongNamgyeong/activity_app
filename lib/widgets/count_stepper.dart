@@ -72,8 +72,8 @@ class _CountStepperState extends State<CountStepper> {
               color: AppColors.inputBackground,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppColors.accent.withValues(alpha: 0.55),
-                width: 1.5,
+                color: AppColors.border,
+                width: 1,
               ),
             ),
             child: Row(
@@ -103,7 +103,7 @@ class _CountStepperState extends State<CountStepper> {
                 Text(
                   '회',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.accent,
+                        color: AppColors.textSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                 ),
@@ -171,7 +171,7 @@ class _CountStepperState extends State<CountStepper> {
                   textAlign: TextAlign.center,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: AppColors.accent,
+                        color: AppColors.textPrimary,
                       ),
                   decoration: const InputDecoration(
                     isDense: true,
@@ -237,9 +237,7 @@ class _CompactStepButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: filled
-          ? AppColors.accent.withValues(alpha: 0.2)
-          : Colors.transparent,
+      color: filled ? AppColors.accentSoft : Colors.transparent,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -250,9 +248,7 @@ class _CompactStepButton extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: filled
-                  ? AppColors.accent.withValues(alpha: 0.7)
-                  : AppColors.border,
+              color: filled ? AppColors.accentMuted : AppColors.border,
               width: 1,
             ),
           ),
@@ -261,7 +257,7 @@ class _CompactStepButton extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 14,
-              color: filled ? AppColors.accent : AppColors.textSecondary,
+              color: filled ? AppColors.accent : AppColors.textMuted,
             ),
           ),
         ),
@@ -287,7 +283,7 @@ class _StepButton extends StatelessWidget {
       label,
       style: TextStyle(
         fontWeight: FontWeight.w700,
-        color: filled ? const Color(0xFF1E1B4B) : AppColors.accent,
+        color: filled ? AppColors.onAccent : AppColors.accent,
       ),
     );
 

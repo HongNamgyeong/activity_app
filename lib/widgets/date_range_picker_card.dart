@@ -42,7 +42,7 @@ class DateRangePickerCard extends StatelessWidget {
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.dark(
               primary: AppColors.accent,
-              onPrimary: Color(0xFF1E1B4B),
+              onPrimary: AppColors.onAccent,
               surface: AppColors.surface,
               onSurface: AppColors.textPrimary,
             ),
@@ -127,7 +127,7 @@ class DateRangePickerCard extends StatelessWidget {
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Color(0xFF1E1B4B),
+                      color: AppColors.onAccent,
                     ),
                   )
                 : const Icon(Icons.search, size: 20),
@@ -172,8 +172,8 @@ class _DateField extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 value,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontSize: 14,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontSize: 17,
                       fontWeight: FontWeight.w600,
                     ),
               ),

@@ -80,3 +80,34 @@ List<DonutChartSegment> buildCategorySegments(List<ActivitySummaryItem> items) {
       )
       .toList();
 }
+
+/// 조회 결과 항목별 비율을 도넛 차트에 반영합니다.
+List<DonutChartSegment> buildSummaryChartSegments(
+  List<ActivitySummaryItem> items,
+) {
+  const palette = [
+    AppColors.chartPrayer,
+    AppColors.chartService,
+    AppColors.chartVisit,
+    AppColors.chartMeeting,
+    AppColors.chartOther,
+    AppColors.accentMuted,
+  ];
+
+  final segments = <DonutChartSegment>[];
+  var colorIndex = 0;
+
+  for (final item in items) {
+    if (item.totalCount <= 0) continue;
+    segments.add(
+      DonutChartSegment(
+        label: item.activityTypeName,
+        value: item.totalCount.toDouble(),
+        color: palette[colorIndex % palette.length],
+      ),
+    );
+    colorIndex++;
+  }
+
+  return segments;
+}

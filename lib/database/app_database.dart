@@ -3,6 +3,8 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/constants/app_constants.dart';
+import '../core/utils/activity_value_format.dart';
+import '../models/activity_measure_type.dart';
 import '../models/activity_record.dart' as models;
 import '../models/activity_summary.dart';
 import '../models/activity_type.dart' as models;
@@ -14,6 +16,8 @@ class ActivityTypes extends Table {
   TextColumn get id => text()();
   TextColumn get name => text().withLength(min: 1, max: 100)();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  TextColumn get measureType =>
+      text().withDefault(const Constant('count'))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -26,6 +30,7 @@ class ActivityRecords extends Table {
   TextColumn get activityTypeId =>
       text().references(ActivityTypes, #id, onDelete: KeyAction.restrict)();
   IntColumn get count => integer().withDefault(const Constant(1))();
+  TextColumn get timeUnit => text().nullable()();
   TextColumn get content => text().withDefault(const Constant(''))();
   DateTimeColumn get createdAt => dateTime()();
 
@@ -40,7 +45,7 @@ class AppDatabase extends _$AppDatabase {
   static const _uuid = Uuid();
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -54,6 +59,13 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 3) {
             await _migrateDefaultActivityTypesV3();
+          }
+          if (from < 4) {
+            await migrator.addColumn(activityTypes, activityTypes.measureType);
+            await migrator.addColumn(activityRecords, activityRecords.timeUnit);
+          }
+          if (from < 5) {
+            await _applyDefaultTimeMeasureTypes();
           }
         },
       );
@@ -80,10 +92,24 @@ class AppDatabase extends _$AppDatabase {
             id: _uuid.v4(),
             name: entry.value,
             sortOrder: Value(entry.key),
+            measureType: Value(
+              AppConstants.defaultMeasureTypeFor(entry.value),
+            ),
           ),
         ),
       );
     });
+  }
+
+  Future<void> _applyDefaultTimeMeasureTypes() async {
+    for (final name in AppConstants.defaultTimeActivityTypes) {
+      await (update(activityTypes)..where((table) => table.name.equals(name)))
+          .write(
+        const ActivityTypesCompanion(
+          measureType: Value('time'),
+        ),
+      );
+    }
   }
 
   /// 예전 기본 6개만 그대로 쓰는 DB는 새 기본 목록으로 교체합니다.
@@ -136,12 +162,17 @@ class AppDatabase extends _$AppDatabase {
             id: row.id,
             name: row.name,
             sortOrder: row.sortOrder,
+            measureType:
+                ActivityMeasureType.fromStorage(row.measureType),
           ),
         )
         .toList();
   }
 
-  Future<models.ActivityType> addActivityType(String name) async {
+  Future<models.ActivityType> addActivityType(
+    String name, {
+    ActivityMeasureType measureType = ActivityMeasureType.count,
+  }) async {
     final current = await getAllActivityTypes();
     final id = _uuid.v4();
     final sortOrder = current.isEmpty ? 0 : current.last.sortOrder + 1;
@@ -151,10 +182,16 @@ class AppDatabase extends _$AppDatabase {
         id: id,
         name: name.trim(),
         sortOrder: Value(sortOrder),
+        measureType: Value(measureType.storageValue),
       ),
     );
 
-    return models.ActivityType(id: id, name: name.trim(), sortOrder: sortOrder);
+    return models.ActivityType(
+      id: id,
+      name: name.trim(),
+      sortOrder: sortOrder,
+      measureType: measureType,
+    );
   }
 
   Future<void> updateActivityType(models.ActivityType type) async {
@@ -163,6 +200,7 @@ class AppDatabase extends _$AppDatabase {
       ActivityTypesCompanion(
         name: Value(type.name.trim()),
         sortOrder: Value(type.sortOrder),
+        measureType: Value(type.measureType.storageValue),
       ),
     );
   }
@@ -185,6 +223,7 @@ class AppDatabase extends _$AppDatabase {
     required String activityTypeId,
     required int count,
     required String content,
+    ActivityTimeUnit? timeUnit,
   }) async {
     final typeRow = await (select(activityTypes)
           ..where((table) => table.id.equals(activityTypeId)))
@@ -198,12 +237,18 @@ class AppDatabase extends _$AppDatabase {
     final normalizedDate = DateTime(date.year, date.month, date.day);
     final createdAt = DateTime.now();
 
+    final measureType = ActivityMeasureType.fromStorage(typeRow.measureType);
+    final storedTimeUnit = measureType == ActivityMeasureType.time
+        ? (timeUnit ?? ActivityTimeUnit.minute).storageValue
+        : null;
+
     await into(activityRecords).insert(
       ActivityRecordsCompanion.insert(
         id: id,
         date: normalizedDate,
         activityTypeId: activityTypeId,
         count: Value(count),
+        timeUnit: Value(storedTimeUnit),
         content: Value(content.trim()),
         createdAt: createdAt,
       ),
@@ -217,6 +262,8 @@ class AppDatabase extends _$AppDatabase {
       count: count,
       content: content.trim(),
       createdAt: createdAt,
+      measureType: measureType,
+      timeUnit: ActivityTimeUnit.fromStorage(storedTimeUnit),
     );
   }
 
@@ -228,22 +275,27 @@ class AppDatabase extends _$AppDatabase {
     final grouped = <String, ActivitySummaryItem>{};
 
     for (final record in records) {
+      final delta = record.measureType == ActivityMeasureType.time
+          ? activityValueToMinutes(record.count, record.timeUnit)
+          : record.count;
       final existing = grouped[record.activityTypeId];
       if (existing == null) {
         grouped[record.activityTypeId] = ActivitySummaryItem(
           activityTypeId: record.activityTypeId,
           activityTypeName: record.activityTypeName,
-          totalCount: record.count,
+          totalCount: delta,
           recordCount: 1,
           records: [record],
+          measureType: record.measureType,
         );
       } else {
         grouped[record.activityTypeId] = ActivitySummaryItem(
           activityTypeId: existing.activityTypeId,
           activityTypeName: existing.activityTypeName,
-          totalCount: existing.totalCount + record.count,
+          totalCount: existing.totalCount + delta,
           recordCount: existing.recordCount + 1,
           records: [...existing.records, record],
+          measureType: existing.measureType,
         );
       }
     }
@@ -256,7 +308,13 @@ class AppDatabase extends _$AppDatabase {
       endDate: DateTime(end.year, end.month, end.day),
       items: items,
       totalRecords: records.length,
-      totalCount: records.fold<int>(0, (sum, record) => sum + record.count),
+      totalCount: records.fold<int>(
+        0,
+        (sum, record) => sum +
+            (record.measureType == ActivityMeasureType.time
+                ? activityValueToMinutes(record.count, record.timeUnit)
+                : record.count),
+      ),
     );
   }
 
@@ -289,15 +347,23 @@ class AppDatabase extends _$AppDatabase {
 
     return rows
         .map(
-          (row) => models.ActivityRecord(
-            id: row.readTable(activityRecords).id,
-            date: row.readTable(activityRecords).date,
-            activityTypeId: row.readTable(activityRecords).activityTypeId,
-            activityTypeName: row.readTable(activityTypes).name,
-            count: row.readTable(activityRecords).count,
-            content: row.readTable(activityRecords).content,
-            createdAt: row.readTable(activityRecords).createdAt,
-          ),
+          (row) {
+            final recordRow = row.readTable(activityRecords);
+            final typeRow = row.readTable(activityTypes);
+            final measureType =
+                ActivityMeasureType.fromStorage(typeRow.measureType);
+            return models.ActivityRecord(
+              id: recordRow.id,
+              date: recordRow.date,
+              activityTypeId: recordRow.activityTypeId,
+              activityTypeName: typeRow.name,
+              count: recordRow.count,
+              content: recordRow.content,
+              createdAt: recordRow.createdAt,
+              measureType: measureType,
+              timeUnit: ActivityTimeUnit.fromStorage(recordRow.timeUnit),
+            );
+          },
         )
         .toList();
   }
@@ -307,8 +373,13 @@ class AppDatabase extends _$AppDatabase {
     required DateTime date,
     required int count,
     required String content,
+    ActivityTimeUnit? timeUnit,
+    ActivityMeasureType? measureType,
   }) async {
     final normalizedDate = DateTime(date.year, date.month, date.day);
+    final storedTimeUnit = measureType == ActivityMeasureType.time
+        ? Value((timeUnit ?? ActivityTimeUnit.minute).storageValue)
+        : const Value<String?>(null);
 
     final updated = await (update(activityRecords)
           ..where((table) => table.id.equals(id)))
@@ -316,6 +387,7 @@ class AppDatabase extends _$AppDatabase {
       ActivityRecordsCompanion(
         date: Value(normalizedDate),
         count: Value(count),
+        timeUnit: storedTimeUnit,
         content: Value(content.trim()),
       ),
     );
@@ -353,6 +425,7 @@ class AppDatabase extends _$AppDatabase {
               id: row.id,
               name: row.name,
               sortOrder: row.sortOrder,
+              measureType: row.measureType,
             ),
           )
           .toList(),
@@ -363,6 +436,7 @@ class AppDatabase extends _$AppDatabase {
               date: row.date,
               activityTypeId: row.activityTypeId,
               count: row.count,
+              timeUnit: row.timeUnit,
               content: row.content,
               createdAt: row.createdAt,
             ),
@@ -389,6 +463,7 @@ class AppDatabase extends _$AppDatabase {
                   id: type.id,
                   name: type.name,
                   sortOrder: Value(type.sortOrder),
+                  measureType: Value(type.measureType),
                 ),
               )
               .toList(),
@@ -404,6 +479,7 @@ class AppDatabase extends _$AppDatabase {
                     date: record.date,
                     activityTypeId: record.activityTypeId,
                     count: Value(record.count),
+                    timeUnit: Value(record.timeUnit),
                     content: Value(record.content),
                     createdAt: record.createdAt,
                   ),
@@ -433,11 +509,13 @@ class BackupActivityType {
     required this.id,
     required this.name,
     required this.sortOrder,
+    this.measureType = 'count',
   });
 
   final String id;
   final String name;
   final int sortOrder;
+  final String measureType;
 }
 
 class BackupActivityRecord {
@@ -448,12 +526,14 @@ class BackupActivityRecord {
     required this.count,
     required this.content,
     required this.createdAt,
+    this.timeUnit,
   });
 
   final String id;
   final DateTime date;
   final String activityTypeId;
   final int count;
+  final String? timeUnit;
   final String content;
   final DateTime createdAt;
 }

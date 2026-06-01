@@ -1,3 +1,4 @@
+import 'activity_measure_type.dart';
 import 'activity_record.dart';
 
 class ActivitySummaryItem {
@@ -7,6 +8,7 @@ class ActivitySummaryItem {
     required this.totalCount,
     required this.recordCount,
     required this.records,
+    this.measureType = ActivityMeasureType.count,
   });
 
   final String activityTypeId;
@@ -14,6 +16,7 @@ class ActivitySummaryItem {
   final int totalCount;
   final int recordCount;
   final List<ActivityRecord> records;
+  final ActivityMeasureType measureType;
 }
 
 class ActivityPeriodSummary {

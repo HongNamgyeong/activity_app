@@ -37,7 +37,7 @@ class RecordDatePicker extends StatelessWidget {
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.dark(
               primary: AppColors.accent,
-              onPrimary: Color(0xFF1E1B4B),
+              onPrimary: AppColors.onAccent,
               surface: AppColors.surface,
               onSurface: AppColors.textPrimary,
             ),
@@ -68,7 +68,7 @@ class RecordDatePicker extends StatelessWidget {
               TextButton(
                 onPressed: () => onDateChanged(_today),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.accent,
+                  foregroundColor: AppColors.textSecondary,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -91,7 +91,7 @@ class RecordDatePicker extends StatelessWidget {
                   Icon(
                     Icons.calendar_today_outlined,
                     size: 20,
-                    color: AppColors.accent.withValues(alpha: 0.9),
+                    color: AppColors.accent,
                   ),
                   const SizedBox(width: 12),
                   Expanded(

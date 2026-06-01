@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/activity_measure_type.dart';
 import '../models/activity_summary.dart';
 import '../services/activity_record_service.dart';
 import 'backup_provider.dart';
@@ -47,15 +48,17 @@ final inquiryProvider =
     NotifierProvider<InquiryNotifier, InquiryState>(InquiryNotifier.new);
 
 class InquiryNotifier extends Notifier<InquiryState> {
+  int _searchGeneration = 0;
+
   static DateTime get _today {
     final now = DateTime.now();
     return DateTime(now.year, now.month, now.day);
   }
 
-  /// 조회 기간 기본값: 1주일 전 ~ 오늘
+  /// 조회 기간 기본값: 6일 전 ~ 오늘 (오늘 포함 7일)
   static InquiryState initialState() {
     return InquiryState(
-      startDate: _today.subtract(const Duration(days: 7)),
+      startDate: _today.subtract(const Duration(days: 6)),
       endDate: _today,
     );
   }
@@ -86,14 +89,17 @@ class InquiryNotifier extends Notifier<InquiryState> {
       return;
     }
 
+    final generation = ++_searchGeneration;
     state = state.copyWith(isLoading: true, clearError: true, clearSummary: true);
 
     try {
       final summary = await ref
           .read(activityRecordServiceProvider)
           .getSummary(start, end);
+      if (generation != _searchGeneration) return;
       state = state.copyWith(summary: summary, isLoading: false);
     } catch (error) {
+      if (generation != _searchGeneration) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: error.toString(),
@@ -121,6 +127,7 @@ class RecordSaveNotifier extends AsyncNotifier<void> {
     required String activityTypeId,
     required int count,
     required String content,
+    ActivityTimeUnit? timeUnit,
   }) async {
     state = const AsyncLoading();
 
@@ -130,6 +137,7 @@ class RecordSaveNotifier extends AsyncNotifier<void> {
             activityTypeId: activityTypeId,
             count: count,
             content: content,
+            timeUnit: timeUnit,
           );
       await scheduleDataBackup(ref);
       state = const AsyncData(null);
