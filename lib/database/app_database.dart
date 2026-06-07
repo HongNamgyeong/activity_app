@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/utils/activity_value_format.dart';
+import '../core/utils/inquiry_period_utils.dart';
 import '../models/activity_measure_type.dart';
 import '../models/activity_record.dart' as models;
 import '../models/activity_summary.dart';
@@ -210,6 +211,20 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  Future<void> reorderActivityTypes(List<String> orderedIds) async {
+    await transaction(() async {
+      for (var index = 0; index < orderedIds.length; index++) {
+        await (update(activityTypes)
+              ..where((table) => table.id.equals(orderedIds[index])))
+            .write(
+          ActivityTypesCompanion(
+            sortOrder: Value(index),
+          ),
+        );
+      }
+    });
+  }
+
   Future<void> deleteActivityType(String id) async {
     final usageCount = await (select(activityRecords)
           ..where((table) => table.activityTypeId.equals(id)))
@@ -308,12 +323,23 @@ class AppDatabase extends _$AppDatabase {
       }
     }
 
+    final typeOrder = {
+      for (final row in await select(activityTypes).get()) row.id: row.sortOrder,
+    };
+
     final items = grouped.values.toList()
-      ..sort((a, b) => a.activityTypeName.compareTo(b.activityTypeName));
+      ..sort((a, b) {
+        final orderCompare = (typeOrder[a.activityTypeId] ?? 999)
+            .compareTo(typeOrder[b.activityTypeId] ?? 999);
+        if (orderCompare != 0) {
+          return orderCompare;
+        }
+        return a.activityTypeName.compareTo(b.activityTypeName);
+      });
 
     return ActivityPeriodSummary(
-      startDate: DateTime(start.year, start.month, start.day),
-      endDate: DateTime(end.year, end.month, end.day),
+      startDate: start,
+      endDate: end,
       items: items,
       totalRecords: records.length,
       totalCount: records.fold<int>(
@@ -354,7 +380,7 @@ class AppDatabase extends _$AppDatabase {
 
     final rows = await query.get();
 
-    return rows
+    final records = rows
         .map(
           (row) {
             final recordRow = row.readTable(activityRecords);
@@ -375,7 +401,16 @@ class AppDatabase extends _$AppDatabase {
             );
           },
         )
+        .where(
+          (record) => isRecordInPeriod(
+            record: record,
+            start: start,
+            end: end,
+          ),
+        )
         .toList();
+
+    return records;
   }
 
   Future<void> updateActivityRecord({

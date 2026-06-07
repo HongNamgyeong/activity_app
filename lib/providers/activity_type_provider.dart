@@ -46,6 +46,24 @@ class ActivityTypesNotifier extends AsyncNotifier<List<ActivityType>> {
     await refresh();
   }
 
+  Future<void> reorderTypes(List<String> orderedIds) async {
+    final current = state.value;
+    if (current == null) return;
+
+    final byId = {for (final type in current) type.id: type};
+    final reordered = <ActivityType>[];
+    for (var index = 0; index < orderedIds.length; index++) {
+      final type = byId[orderedIds[index]];
+      if (type != null) {
+        reordered.add(type.copyWith(sortOrder: index));
+      }
+    }
+
+    state = AsyncData(reordered);
+    await ref.read(activityTypeServiceProvider).reorder(orderedIds);
+    await scheduleDataBackup(ref);
+  }
+
   Future<void> deleteType(String id) async {
     await ref.read(activityTypeServiceProvider).delete(id);
     await scheduleDataBackup(ref);

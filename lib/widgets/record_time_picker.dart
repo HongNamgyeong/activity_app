@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/utils/activity_value_format.dart';
+import '../services/time_picker_preferences_service.dart';
+import 'app_time_picker_dialog.dart';
 
 class RecordTimePicker extends StatelessWidget {
   const RecordTimePicker({
@@ -16,26 +18,10 @@ class RecordTimePicker extends StatelessWidget {
   final bool compact;
 
   Future<void> _openPicker(BuildContext context) async {
-    final picked = await showTimePicker(
+    final picked = await showAppTimePicker(
       context: context,
       initialTime: selectedTime,
-      initialEntryMode: TimePickerEntryMode.input,
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-          child: Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.light(
-                primary: AppColors.accent,
-                onPrimary: AppColors.onAccent,
-                surface: AppColors.surface,
-                onSurface: AppColors.textPrimary,
-              ),
-            ),
-            child: child!,
-          ),
-        );
-      },
+      scope: TimePickerPreferenceScope.record,
     );
 
     if (picked != null) {

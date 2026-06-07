@@ -6,13 +6,18 @@ import 'package:intl/intl.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
+import '../core/utils/activity_value_format.dart';
 import '../models/activity_measure_type.dart';
 import '../models/activity_type.dart';
+import '../models/legio_meeting_schedule.dart';
 import '../providers/activity_type_provider.dart';
 import '../providers/backup_provider.dart';
+import '../providers/activity_record_provider.dart';
+import '../providers/legio_meeting_provider.dart';
 import '../services/android_public_backup.dart';
 import '../services/backup_service.dart';
 import '../widgets/app_card.dart';
+import '../widgets/record_time_picker.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -29,6 +34,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void initState() {
     super.initState();
     _loadLastBackupTime();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(legioMeetingScheduleProvider.notifier).load();
+    });
   }
 
   Future<void> _loadLastBackupTime() async {
@@ -146,6 +154,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _showLegioMeetingDialog() async {
+    final current = ref.read(legioMeetingScheduleProvider);
+    final result = await showDialog<LegioMeetingSchedule>(
+      context: context,
+      builder: (context) => _LegioMeetingDialog(
+        initial: current ??
+            const LegioMeetingSchedule(weekday: 3, meetingTime: '19:00'),
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    await ref.read(legioMeetingScheduleProvider.notifier).save(result);
+    ref.read(inquiryProvider.notifier).applyLegioSchedule(result);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('주회시간을 ${result.displayLabel}로 저장했습니다.')),
+      );
+    }
+  }
+
   Future<void> _showAddActivityDialog() async {
     final result = await showDialog<({String name, ActivityMeasureType measureType})?>(
       context: context,
@@ -192,6 +221,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final typesAsync = ref.watch(activityTypesProvider);
+    final legioSchedule = ref.watch(legioMeetingScheduleProvider);
 
     return typesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -205,6 +235,66 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const ScreenHeader(
                     title: '활동 항목 설정',
                     subtitle: '활동 보고에 사용될 카테고리를 관리합니다',
+                  ),
+                  const SizedBox(height: 24),
+                  const SectionTitle(title: '레지오 주회시간'),
+                  const SizedBox(height: 12),
+                  AppCard(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: _showLegioMeetingDialog,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceElevated,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.event_repeat,
+                                color: AppColors.textSecondary,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '레지오 주회시간',
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    legioSchedule?.displayLabel ??
+                                        '요일과 시간을 설정해 주세요',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: legioSchedule == null
+                                              ? AppColors.textMuted
+                                              : AppColors.accent,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.chevron_right,
+                              color:
+                                  AppColors.textMuted.withValues(alpha: 0.8),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 24),
                   const SectionTitle(title: '데이터 백업'),
@@ -259,6 +349,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '길게 눌러 드래그하면 우선순위를 변경할 수 있습니다.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                  ),
                   const SizedBox(height: 12),
                   if (types.isEmpty)
                     const AppCard(
@@ -267,29 +364,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     )
                   else
-                    ...types.map(
-                      (type) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _ActivityTypeTile(
-                          type: type,
-                          onMeasureTypeChanged: (measureType) async {
-                            try {
-                              await ref
-                                  .read(activityTypesProvider.notifier)
-                                  .updateType(
-                                    type.copyWith(measureType: measureType),
-                                  );
-                            } catch (error) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(error.toString())),
-                                );
-                              }
-                            }
-                          },
-                          onDelete: () => _deleteType(type.id, type.name),
-                        ),
-                      ),
+                    _ReorderableActivityTypeList(
+                      types: ActivityType.sortedByPriority(types),
+                      onReorder: (orderedIds) async {
+                        try {
+                          await ref
+                              .read(activityTypesProvider.notifier)
+                              .reorderTypes(orderedIds);
+                        } catch (error) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(error.toString())),
+                            );
+                          }
+                        }
+                      },
+                      onMeasureTypeChanged: (type, measureType) async {
+                        try {
+                          await ref
+                              .read(activityTypesProvider.notifier)
+                              .updateType(
+                                type.copyWith(measureType: measureType),
+                              );
+                        } catch (error) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(error.toString())),
+                            );
+                          }
+                        }
+                      },
+                      onDelete: _deleteType,
                     ),
               ],
             ),
@@ -307,6 +412,92 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _LegioMeetingDialog extends StatefulWidget {
+  const _LegioMeetingDialog({required this.initial});
+
+  final LegioMeetingSchedule initial;
+
+  @override
+  State<_LegioMeetingDialog> createState() => _LegioMeetingDialogState();
+}
+
+class _LegioMeetingDialogState extends State<_LegioMeetingDialog> {
+  late int _weekday = widget.initial.weekday;
+  late TimeOfDay _time = widget.initial.time;
+
+  void _submit() {
+    Navigator.pop(
+      context,
+      LegioMeetingSchedule(
+        weekday: _weekday,
+        meetingTime: formatClockTime(_time),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('레지오 주회시간'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '주회 요일',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.inputBackground,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: DropdownButton<int>(
+                  value: _weekday,
+                  isExpanded: true,
+                  underline: const SizedBox.shrink(),
+                  items: LegioMeetingSchedule.weekdayLabels.entries
+                      .map(
+                        (entry) => DropdownMenuItem(
+                          value: entry.key,
+                          child: Text(entry.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _weekday = value);
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            RecordTimePicker(
+              selectedTime: _time,
+              onTimeChanged: (time) => setState(() => _time = time),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('저장'),
+        ),
+      ],
     );
   }
 }
@@ -401,16 +592,66 @@ class _AddActivityDialogState extends State<_AddActivityDialog> {
   }
 }
 
+class _ReorderableActivityTypeList extends StatelessWidget {
+  const _ReorderableActivityTypeList({
+    required this.types,
+    required this.onReorder,
+    required this.onMeasureTypeChanged,
+    required this.onDelete,
+  });
+
+  final List<ActivityType> types;
+  final Future<void> Function(List<String> orderedIds) onReorder;
+  final Future<void> Function(ActivityType type, ActivityMeasureType measureType)
+      onMeasureTypeChanged;
+  final Future<void> Function(String id, String name) onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return ReorderableListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      buildDefaultDragHandles: false,
+      itemCount: types.length,
+      onReorderItem: (oldIndex, newIndex) async {
+        final reordered = [...types];
+        final moved = reordered.removeAt(oldIndex);
+        reordered.insert(newIndex, moved);
+        await onReorder(reordered.map((type) => type.id).toList());
+      },
+      itemBuilder: (context, index) {
+        final type = types[index];
+        return Padding(
+          key: ValueKey(type.id),
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _ActivityTypeTile(
+            type: type,
+            priority: index + 1,
+            dragIndex: index,
+            onMeasureTypeChanged: (measureType) =>
+                onMeasureTypeChanged(type, measureType),
+            onDelete: () => onDelete(type.id, type.name),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _ActivityTypeTile extends StatelessWidget {
   const _ActivityTypeTile({
     required this.type,
     required this.onMeasureTypeChanged,
     required this.onDelete,
+    this.priority,
+    this.dragIndex,
   });
 
   final ActivityType type;
   final ValueChanged<ActivityMeasureType> onMeasureTypeChanged;
   final VoidCallback onDelete;
+  final int? priority;
+  final int? dragIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -421,6 +662,35 @@ class _ActivityTypeTile extends StatelessWidget {
         children: [
           Row(
             children: [
+              if (dragIndex != null)
+                ReorderableDragStartListener(
+                  index: dragIndex!,
+                  child: const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child: Icon(
+                      Icons.drag_handle,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ),
+              if (priority != null)
+                Container(
+                  width: 28,
+                  height: 28,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentSoft,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$priority',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+              if (priority != null) const SizedBox(width: 10),
               Container(
                 width: 40,
                 height: 40,

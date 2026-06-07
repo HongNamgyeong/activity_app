@@ -3,16 +3,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/activity_detail_provider.dart';
 import '../providers/activity_record_provider.dart';
+import '../providers/legio_meeting_provider.dart';
 import '../widgets/app_card.dart';
 import '../widgets/date_range_picker_card.dart';
 import '../widgets/summary_section.dart';
 
-class InquiryScreen extends ConsumerWidget {
+class InquiryScreen extends ConsumerStatefulWidget {
   const InquiryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<InquiryScreen> createState() => _InquiryScreenState();
+}
+
+class _InquiryScreenState extends ConsumerState<InquiryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(inquiryProvider.notifier).initialize();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final inquiry = ref.watch(inquiryProvider);
+    final legioSchedule = ref.watch(legioMeetingScheduleProvider);
 
     return SafeArea(
       child: ListView(
@@ -26,19 +41,25 @@ class InquiryScreen extends ConsumerWidget {
           DateRangePickerCard(
             startDate: inquiry.startDate,
             endDate: inquiry.endDate,
+            legioSchedule: legioSchedule,
             isLoading: inquiry.isLoading,
-            onStartChanged: (date) {
-              ref.read(inquiryProvider.notifier).selectRange(
-                    date,
-                    inquiry.endDate,
-                  );
+            onStartDateChanged: (date) {
+              ref.read(inquiryProvider.notifier).selectStartDate(date);
             },
-            onEndChanged: (date) {
-              ref.read(inquiryProvider.notifier).selectRange(
-                    inquiry.startDate,
-                    date,
-                  );
+            onStartTimeChanged: (time) {
+              ref.read(inquiryProvider.notifier).selectStartTime(time);
             },
+            onEndDateChanged: (date) {
+              ref.read(inquiryProvider.notifier).selectEndDate(date);
+            },
+            onEndTimeChanged: (time) {
+              ref.read(inquiryProvider.notifier).selectEndTime(time);
+            },
+            onResetStartToLegio: legioSchedule == null
+                ? null
+                : () => ref
+                    .read(inquiryProvider.notifier)
+                    .resetStartToLegioDefault(legioSchedule),
             onSearch: () => ref.read(inquiryProvider.notifier).search(),
           ),
           if (inquiry.errorMessage != null) ...[

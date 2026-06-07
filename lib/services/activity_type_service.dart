@@ -17,5 +17,8 @@ class ActivityTypeService {
 
   Future<void> update(ActivityType type) => _database.updateActivityType(type);
 
+  Future<void> reorder(List<String> orderedIds) =>
+      _database.reorderActivityTypes(orderedIds);
+
   Future<void> delete(String id) => _database.deleteActivityType(id);
 }

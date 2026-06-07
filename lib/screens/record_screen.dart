@@ -298,7 +298,8 @@ class _ActivityTypeDropdown extends StatelessWidget {
       );
     }
 
-    final items = types
+    final sortedTypes = ActivityType.sortedByPriority(types);
+    final items = sortedTypes
         .map(
           (type) => DropdownMenuItem<String>(
             value: type.id,

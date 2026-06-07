@@ -1,28 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/utils/inquiry_period_utils.dart';
+import '../models/legio_meeting_schedule.dart';
 import 'app_card.dart';
+import 'app_time_picker_dialog.dart';
 
 class DateRangePickerCard extends StatelessWidget {
   const DateRangePickerCard({
     super.key,
     required this.startDate,
     required this.endDate,
-    required this.onStartChanged,
-    required this.onEndChanged,
+    required this.onStartDateChanged,
+    required this.onStartTimeChanged,
+    required this.onEndDateChanged,
+    required this.onEndTimeChanged,
     required this.onSearch,
+    this.legioSchedule,
+    this.onResetStartToLegio,
     this.isLoading = false,
   });
 
   final DateTime? startDate;
   final DateTime? endDate;
-  final ValueChanged<DateTime> onStartChanged;
-  final ValueChanged<DateTime> onEndChanged;
+  final ValueChanged<DateTime> onStartDateChanged;
+  final ValueChanged<TimeOfDay> onStartTimeChanged;
+  final ValueChanged<DateTime> onEndDateChanged;
+  final ValueChanged<TimeOfDay> onEndTimeChanged;
   final VoidCallback onSearch;
+  final LegioMeetingSchedule? legioSchedule;
+  final VoidCallback? onResetStartToLegio;
   final bool isLoading;
-
-  static final _dateFormat = DateFormat('yyyy.MM.dd (E)', 'ko_KR');
 
   Future<void> _pickDate(
     BuildContext context, {
@@ -57,6 +65,23 @@ class DateRangePickerCard extends StatelessWidget {
     }
   }
 
+  Future<void> _pickTime(
+    BuildContext context, {
+    required DateTime? base,
+    required ValueChanged<TimeOfDay> onChanged,
+  }) async {
+    if (base == null) return;
+
+    final picked = await showAppTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(base),
+    );
+
+    if (picked != null) {
+      onChanged(picked);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppCard(
@@ -78,45 +103,67 @@ class DateRangePickerCard extends StatelessWidget {
               ),
             ],
           ),
+          if (legioSchedule != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              '시작일시 기본값: 가장 최근 지난 ${legioSchedule!.displayLabel}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+            ),
+          ],
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _DateField(
-                  label: '시작일',
-                  value: startDate == null
-                      ? '선택'
-                      : _dateFormat.format(startDate!),
-                  onTap: () => _pickDate(
-                    context,
-                    initial: startDate ?? endDate,
-                    maxDate: endDate,
-                    onChanged: onStartChanged,
-                  ),
-                ),
+          _DateTimeField(
+            label: '시작',
+            dateValue: startDate == null
+                ? '날짜 선택'
+                : formatDateTimeLabel(startDate!),
+            onDateTap: () => _pickDate(
+              context,
+              initial: startDate ?? endDate,
+              maxDate: endDate,
+              onChanged: onStartDateChanged,
+            ),
+            showTime: startDate != null,
+            onTimeTap: startDate == null
+                ? null
+                : () => _pickTime(
+                      context,
+                      base: startDate,
+                      onChanged: onStartTimeChanged,
+                    ),
+          ),
+          if (legioSchedule != null && onResetStartToLegio != null) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onResetStartToLegio,
+                icon: const Icon(Icons.restore, size: 18),
+                label: const Text('주회시간 기준으로 맞추기'),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Icon(
-                  Icons.arrow_forward,
-                  color: AppColors.textMuted,
-                  size: 16,
-                ),
-              ),
-              Expanded(
-                child: _DateField(
-                  label: '종료일',
-                  value:
-                      endDate == null ? '선택' : _dateFormat.format(endDate!),
-                  onTap: () => _pickDate(
-                    context,
-                    initial: endDate ?? startDate,
-                    minDate: startDate,
-                    onChanged: onEndChanged,
-                  ),
-                ),
-              ),
-            ],
+            ),
+          ],
+          const SizedBox(height: 12),
+          _DateTimeField(
+            label: '종료',
+            dateValue: endDate == null
+                ? '날짜 선택'
+                : formatDateTimeLabel(endDate!),
+            onDateTap: () => _pickDate(
+              context,
+              initial: endDate ?? startDate,
+              minDate: startDate,
+              onChanged: onEndDateChanged,
+            ),
+            showTime: endDate != null,
+            onTimeTap: endDate == null
+                ? null
+                : () => _pickTime(
+                      context,
+                      base: endDate,
+                      onChanged: onEndTimeChanged,
+                    ),
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
@@ -139,16 +186,20 @@ class DateRangePickerCard extends StatelessWidget {
   }
 }
 
-class _DateField extends StatelessWidget {
-  const _DateField({
+class _DateTimeField extends StatelessWidget {
+  const _DateTimeField({
     required this.label,
-    required this.value,
-    required this.onTap,
+    required this.dateValue,
+    required this.onDateTap,
+    this.showTime = false,
+    this.onTimeTap,
   });
 
   final String label;
-  final String value;
-  final VoidCallback onTap;
+  final String dateValue;
+  final VoidCallback onDateTap;
+  final bool showTime;
+  final VoidCallback? onTimeTap;
 
   @override
   Widget build(BuildContext context) {
@@ -157,26 +208,38 @@ class _DateField extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
+        onTap: onDateTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
+                          ),
                     ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(height: 4),
+                    Text(
+                      dateValue,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
+                  ],
+                ),
               ),
+              if (showTime && onTimeTap != null)
+                TextButton.icon(
+                  onPressed: onTimeTap,
+                  icon: const Icon(Icons.schedule, size: 18),
+                  label: const Text('시간'),
+                ),
             ],
           ),
         ),

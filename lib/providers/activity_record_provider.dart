@@ -1,10 +1,14 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/inquiry_period_utils.dart';
 import '../models/activity_measure_type.dart';
 import '../models/activity_summary.dart';
+import '../models/legio_meeting_schedule.dart';
 import '../services/activity_record_service.dart';
 import 'backup_provider.dart';
 import 'database_provider.dart';
+import 'legio_meeting_provider.dart';
 
 final activityRecordServiceProvider = Provider<ActivityRecordService>((ref) {
   return ActivityRecordService(ref.watch(appDatabaseProvider));
@@ -17,6 +21,7 @@ class InquiryState {
     this.summary,
     this.isLoading = false,
     this.errorMessage,
+    this.initialized = false,
   });
 
   final DateTime? startDate;
@@ -24,6 +29,7 @@ class InquiryState {
   final ActivityPeriodSummary? summary;
   final bool isLoading;
   final String? errorMessage;
+  final bool initialized;
 
   InquiryState copyWith({
     DateTime? startDate,
@@ -31,6 +37,7 @@ class InquiryState {
     ActivityPeriodSummary? summary,
     bool? isLoading,
     String? errorMessage,
+    bool? initialized,
     bool clearSummary = false,
     bool clearError = false,
   }) {
@@ -40,6 +47,7 @@ class InquiryState {
       summary: clearSummary ? null : (summary ?? this.summary),
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      initialized: initialized ?? this.initialized,
     );
   }
 }
@@ -50,25 +58,90 @@ final inquiryProvider =
 class InquiryNotifier extends Notifier<InquiryState> {
   int _searchGeneration = 0;
 
-  static DateTime get _today {
-    final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day);
+  @override
+  InquiryState build() => const InquiryState();
+
+  Future<void> initialize() async {
+    if (state.initialized) return;
+
+    await ref.read(legioMeetingScheduleProvider.notifier).load();
+    final schedule = ref.read(legioMeetingScheduleProvider);
+    state = _defaultState(schedule).copyWith(initialized: true);
   }
 
-  /// 조회 기간 기본값: 6일 전 ~ 오늘 (오늘 포함 7일)
-  static InquiryState initialState() {
+  InquiryState _defaultState(LegioMeetingSchedule? schedule) {
+    final now = DateTime.now();
+    final start = schedule == null
+        ? DateTime(now.year, now.month, now.day)
+            .subtract(const Duration(days: 6))
+        : mostRecentPastLegioMeeting(reference: now, schedule: schedule);
+
     return InquiryState(
-      startDate: _today.subtract(const Duration(days: 6)),
-      endDate: _today,
+      startDate: start,
+      endDate: now,
+      initialized: true,
     );
   }
 
-  @override
-  InquiryState build() => initialState();
+  void applyLegioSchedule(LegioMeetingSchedule schedule) {
+    resetStartToLegioDefault(schedule);
+  }
 
-  void selectRange(DateTime? start, DateTime? end) {
+  void resetStartToLegioDefault(LegioMeetingSchedule schedule) {
+    state = state.copyWith(
+      startDate: mostRecentPastLegioMeeting(
+        reference: DateTime.now(),
+        schedule: schedule,
+      ),
+      clearSummary: true,
+      clearError: true,
+    );
+  }
+
+  void selectStartDate(DateTime pickedDate) {
+    final existing = state.startDate ?? DateTime.now();
+    final start = combineDateAndTime(
+      pickedDate,
+      TimeOfDay(hour: existing.hour, minute: existing.minute),
+    );
+
     state = state.copyWith(
       startDate: start,
+      clearSummary: true,
+      clearError: true,
+    );
+  }
+
+  void selectStartTime(TimeOfDay time) {
+    final existing = state.startDate ?? DateTime.now();
+    final start = combineDateAndTime(existing, time);
+
+    state = state.copyWith(
+      startDate: start,
+      clearSummary: true,
+      clearError: true,
+    );
+  }
+
+  void selectEndDate(DateTime pickedDate) {
+    final existing = state.endDate ?? DateTime.now();
+    final end = combineDateAndTime(
+      pickedDate,
+      TimeOfDay(hour: existing.hour, minute: existing.minute),
+    );
+
+    state = state.copyWith(
+      endDate: end,
+      clearSummary: true,
+      clearError: true,
+    );
+  }
+
+  void selectEndTime(TimeOfDay time) {
+    final existing = state.endDate ?? DateTime.now();
+    final end = combineDateAndTime(existing, time);
+
+    state = state.copyWith(
       endDate: end,
       clearSummary: true,
       clearError: true,
@@ -85,7 +158,7 @@ class InquiryNotifier extends Notifier<InquiryState> {
     }
 
     if (end.isBefore(start)) {
-      state = state.copyWith(errorMessage: '종료일은 시작일 이후여야 합니다.');
+      state = state.copyWith(errorMessage: '종료일시는 시작일시 이후여야 합니다.');
       return;
     }
 

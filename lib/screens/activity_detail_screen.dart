@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-
 import '../core/theme/app_colors.dart';
 import '../core/utils/activity_value_format.dart';
+import '../core/utils/inquiry_period_utils.dart';
 import '../models/activity_measure_type.dart';
 import '../models/activity_record.dart';
 import '../providers/activity_detail_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../widgets/app_card.dart';
+import '../widgets/app_time_picker_dialog.dart';
 import '../widgets/count_stepper.dart';
 import '../widgets/time_stepper.dart';
 
 class ActivityDetailScreen extends ConsumerWidget {
   const ActivityDetailScreen({super.key});
-
-  static final _dateFormat = DateFormat('yyyy.MM.dd');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -205,17 +203,9 @@ class ActivityDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 OutlinedButton(
                   onPressed: () async {
-                    final picked = await showTimePicker(
+                    final picked = await showAppTimePicker(
                       context: context,
                       initialTime: selectedTime,
-                      initialEntryMode: TimePickerEntryMode.input,
-                      builder: (context, child) {
-                        return MediaQuery(
-                          data: MediaQuery.of(context)
-                              .copyWith(alwaysUse24HourFormat: true),
-                          child: child!,
-                        );
-                      },
                     );
                     if (picked != null) {
                       setDialogState(() => selectedTime = picked);
@@ -299,7 +289,7 @@ class _SummaryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateRange =
-        '${ActivityDetailScreen._dateFormat.format(detail.startDate!)} - ${ActivityDetailScreen._dateFormat.format(detail.endDate!)}';
+        '${formatDateTimeLabel(detail.startDate!)} - ${formatDateTimeLabel(detail.endDate!)}';
 
     return Container(
       padding: const EdgeInsets.all(20),

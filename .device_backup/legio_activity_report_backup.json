@@ -1,0 +1,312 @@
+{
+  "version": 1,
+  "exportedAt": "2026-06-07T09:13:12.378926Z",
+  "activityTypes": [
+    {
+      "id": "d30f6f36-992c-472c-b504-099e707bdc82",
+      "name": "묵주기도",
+      "sortOrder": 0,
+      "measureType": "count"
+    },
+    {
+      "id": "5b0a83dd-9b00-4c7d-940b-d9d0cfad166b",
+      "name": "미사",
+      "sortOrder": 1,
+      "measureType": "count"
+    },
+    {
+      "id": "d20986c1-5917-408f-aae9-0085453b6d99",
+      "name": "시복시성, 청원기도",
+      "sortOrder": 2,
+      "measureType": "count"
+    },
+    {
+      "id": "b079da99-9110-4d85-96fd-6ef0b914d752",
+      "name": "가족성화기도",
+      "sortOrder": 3,
+      "measureType": "count"
+    },
+    {
+      "id": "87a723b4-f842-4108-88c8-b026f6dd0473",
+      "name": "전례봉사",
+      "sortOrder": 4,
+      "measureType": "count"
+    },
+    {
+      "id": "f0d5d162-1b7e-47f3-a601-0460fa2d4506",
+      "name": "본당 활동",
+      "sortOrder": 5,
+      "measureType": "count"
+    },
+    {
+      "id": "9d4b0e58-d27e-47aa-9598-7b80ceffbb10",
+      "name": "행사준비",
+      "sortOrder": 6,
+      "measureType": "count"
+    },
+    {
+      "id": "af0c7923-d4a3-4149-afd6-14731d76fecd",
+      "name": "아침저녁 기도",
+      "sortOrder": 7,
+      "measureType": "count"
+    },
+    {
+      "id": "1a377831-4cb7-4d16-ab3b-3173ae2fa7de",
+      "name": "가족간미사",
+      "sortOrder": 8,
+      "measureType": "count"
+    },
+    {
+      "id": "f5054947-013a-4863-932d-3f454bfd88eb",
+      "name": "성경읽기",
+      "sortOrder": 9,
+      "measureType": "time"
+    },
+    {
+      "id": "2790501c-ffb5-4d89-8a2c-0c9b5ee00694",
+      "name": "성경쓰기",
+      "sortOrder": 10,
+      "measureType": "time"
+    },
+    {
+      "id": "d245b691-6818-4d06-88e0-964f8eeb6f0b",
+      "name": "성체조배",
+      "sortOrder": 11,
+      "measureType": "count"
+    },
+    {
+      "id": "f1d099b1-3382-427a-b500-856a531ba6c5",
+      "name": "연도",
+      "sortOrder": 12,
+      "measureType": "count"
+    },
+    {
+      "id": "99dbd148-dc32-4d5e-8e2c-51e85c803902",
+      "name": "십자가의길",
+      "sortOrder": 13,
+      "measureType": "count"
+    },
+    {
+      "id": "3075e3f6-1d95-43eb-8cd8-5911de82a08f",
+      "name": "소성무일도",
+      "sortOrder": 14,
+      "measureType": "count"
+    },
+    {
+      "id": "62845738-90b2-464a-a2c1-9fdc17f81a97",
+      "name": "교우돌봄",
+      "sortOrder": 15,
+      "measureType": "count"
+    },
+    {
+      "id": "df8dab43-9bb9-4a8d-8ee6-aec68e8ac9d7",
+      "name": "환경보호",
+      "sortOrder": 16,
+      "measureType": "count"
+    },
+    {
+      "id": "75cd19f1-2c6b-4d77-aa58-b3bf22e6f5b1",
+      "name": "비신자상가방문",
+      "sortOrder": 17,
+      "measureType": "count"
+    },
+    {
+      "id": "83cc2367-bd02-423b-926c-ff39af53eec7",
+      "name": "성지순례",
+      "sortOrder": 18,
+      "measureType": "count"
+    }
+  ],
+  "activityRecords": [
+    {
+      "id": "567d3eeb-1034-4e81-bbf5-5aa6c170b88c",
+      "date": "2026-06-02T00:00:00.000",
+      "activityTypeId": "f5054947-013a-4863-932d-3f454bfd88eb",
+      "count": 2,
+      "timeUnit": "hour",
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-02T23:09:40.000"
+    },
+    {
+      "id": "843be356-618c-40f8-a6f0-aed218aa6d51",
+      "date": "2026-06-02T00:00:00.000",
+      "activityTypeId": "5b0a83dd-9b00-4c7d-940b-d9d0cfad166b",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-02T23:11:44.000"
+    },
+    {
+      "id": "04e39be7-8ffc-4b0b-bfa8-95387e950137",
+      "date": "2026-06-02T00:00:00.000",
+      "activityTypeId": "b079da99-9110-4d85-96fd-6ef0b914d752",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-02T23:12:40.000"
+    },
+    {
+      "id": "0b65ff5e-c972-4c00-83b2-82c3ed4b9ec2",
+      "date": "2026-06-03T00:00:00.000",
+      "activityTypeId": "d30f6f36-992c-472c-b504-099e707bdc82",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-04T00:39:22.000"
+    },
+    {
+      "id": "50409dc8-b933-4b0d-a8fb-f58395def64c",
+      "date": "2026-06-03T00:00:00.000",
+      "activityTypeId": "f5054947-013a-4863-932d-3f454bfd88eb",
+      "count": 20,
+      "timeUnit": "minute",
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-04T00:39:40.000"
+    },
+    {
+      "id": "c1b8197a-8a0d-4474-a31e-2d9ad7388e75",
+      "date": "2026-06-04T00:00:00.000",
+      "activityTypeId": "f5054947-013a-4863-932d-3f454bfd88eb",
+      "count": 20,
+      "timeUnit": "minute",
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-04T09:22:20.000"
+    },
+    {
+      "id": "7fcb9a67-6311-452a-bd94-133367eb367c",
+      "date": "2026-06-03T00:00:00.000",
+      "activityTypeId": "b079da99-9110-4d85-96fd-6ef0b914d752",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-04T09:25:06.000"
+    },
+    {
+      "id": "5fa59318-a20f-4cb9-9534-6bfa8a3915ed",
+      "date": "2026-06-04T00:00:00.000",
+      "activityTypeId": "d30f6f36-992c-472c-b504-099e707bdc82",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-04T11:28:52.000"
+    },
+    {
+      "id": "e01e296c-af93-4e09-bba0-8f322cfca042",
+      "date": "2026-06-04T00:00:00.000",
+      "activityTypeId": "d30f6f36-992c-472c-b504-099e707bdc82",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-04T21:20:13.000"
+    },
+    {
+      "id": "5a07ba80-314d-4c89-a0a0-14809f0e91bd",
+      "date": "2026-06-04T00:00:00.000",
+      "activityTypeId": "d30f6f36-992c-472c-b504-099e707bdc82",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-04T23:40:00.000"
+    },
+    {
+      "id": "d872b813-5a3e-4716-8fa0-c928589e9d33",
+      "date": "2026-06-05T00:00:00.000",
+      "activityTypeId": "d30f6f36-992c-472c-b504-099e707bdc82",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-05T12:30:27.000"
+    },
+    {
+      "id": "3427adcb-fe0b-4018-8b31-123745056b67",
+      "date": "2026-06-05T00:00:00.000",
+      "activityTypeId": "5b0a83dd-9b00-4c7d-940b-d9d0cfad166b",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-05T12:30:33.000"
+    },
+    {
+      "id": "ba8c7ec0-3afa-41c3-9675-00d237ff6f1e",
+      "date": "2026-06-05T00:00:00.000",
+      "activityTypeId": "99dbd148-dc32-4d5e-8e2c-51e85c803902",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-05T12:30:40.000"
+    },
+    {
+      "id": "1a15a741-889b-4549-b021-3c3523be1191",
+      "date": "2026-06-04T00:00:00.000",
+      "activityTypeId": "b079da99-9110-4d85-96fd-6ef0b914d752",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-05T12:31:40.000"
+    },
+    {
+      "id": "e0800c29-ea66-45a4-a9d5-3732e085221b",
+      "date": "2026-06-05T00:00:00.000",
+      "activityTypeId": "f5054947-013a-4863-932d-3f454bfd88eb",
+      "count": 20,
+      "timeUnit": "minute",
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-05T18:10:46.000"
+    },
+    {
+      "id": "183d9e2e-591e-42b9-931e-827c456f7dff",
+      "date": "2026-06-06T00:00:00.000",
+      "activityTypeId": "d30f6f36-992c-472c-b504-099e707bdc82",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-06T14:12:34.000"
+    },
+    {
+      "id": "22547666-34fd-4d6f-8512-263dfbbf2f5d",
+      "date": "2026-06-06T00:00:00.000",
+      "activityTypeId": "d30f6f36-992c-472c-b504-099e707bdc82",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-07T14:27:27.000"
+    },
+    {
+      "id": "8ac07c65-c984-41d6-bb9a-c537a402c483",
+      "date": "2026-06-07T00:00:00.000",
+      "activityTypeId": "d30f6f36-992c-472c-b504-099e707bdc82",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-07T14:27:32.000"
+    },
+    {
+      "id": "5eed69f6-14f6-429c-8ea3-3b2d572f85e4",
+      "date": "2026-06-07T00:00:00.000",
+      "activityTypeId": "87a723b4-f842-4108-88c8-b026f6dd0473",
+      "count": 1,
+      "timeUnit": null,
+      "recordTime": null,
+      "content": "",
+      "createdAt": "2026-06-07T14:33:57.000"
+    }
+  ]
+}

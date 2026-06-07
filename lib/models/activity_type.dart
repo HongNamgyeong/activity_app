@@ -13,6 +13,10 @@ class ActivityType {
   final int sortOrder;
   final ActivityMeasureType measureType;
 
+  static List<ActivityType> sortedByPriority(List<ActivityType> types) {
+    return [...types]..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
   ActivityType copyWith({
     String? id,
     String? name,
