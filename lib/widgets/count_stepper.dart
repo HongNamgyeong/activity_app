@@ -10,12 +10,14 @@ class CountStepper extends StatefulWidget {
     required this.onChanged,
     this.min = 1,
     this.compact = false,
+    this.unitLabel = '회',
   });
 
   final int value;
   final ValueChanged<int> onChanged;
   final int min;
   final bool compact;
+  final String unitLabel;
 
   @override
   State<CountStepper> createState() => _CountStepperState();
@@ -101,7 +103,7 @@ class _CountStepperState extends State<CountStepper> {
                   ),
                 ),
                 Text(
-                  '회',
+                  widget.unitLabel,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.textSecondary,
                         fontWeight: FontWeight.w600,

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +10,7 @@ import '../models/activity_measure_type.dart';
 import '../models/activity_type.dart';
 import '../providers/activity_type_provider.dart';
 import '../providers/backup_provider.dart';
+import '../services/android_public_backup.dart';
 import '../services/backup_service.dart';
 import '../widgets/app_card.dart';
 
@@ -38,6 +41,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _runBackup() async {
     setState(() => _backupBusy = true);
     try {
+      if (Platform.isAndroid) {
+        final granted = await AndroidPublicBackup.ensureAccess(context: context);
+        if (!granted) return;
+      }
+
       final time = await ref.read(backupServiceProvider).writeBackup();
       if (mounted) {
         setState(() => _lastBackupTime = time);
@@ -61,6 +69,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _runRestore() async {
     setState(() => _backupBusy = true);
     try {
+      if (Platform.isAndroid) {
+        final granted = await AndroidPublicBackup.ensureAccess(context: context);
+        if (!granted) return;
+      }
+
       final result = await ref
           .read(backupServiceProvider)
           .restoreFromBackupFile(force: true);
@@ -92,7 +105,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           );
         case BackupRestoreResult.failed:
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('백업 복원에 실패했습니다.')),
+            const SnackBar(
+              content: Text(
+                '백업 복원에 실패했습니다. 다운로드/LegioActivityReport 폴더의 '
+                '백업 파일과 접근 권한을 확인해 주세요.',
+              ),
+            ),
           );
       }
     } catch (error) {
@@ -179,9 +197,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Center(child: Text(error.toString())),
       data: (types) => SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Stack(
           children: [
+            ListView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+              children: [
                   const ScreenHeader(
                     title: '활동 항목 설정',
                     subtitle: '활동 보고에 사용될 카테고리를 관리합니다',
@@ -242,7 +262,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: 12),
                   if (types.isEmpty)
                     const AppCard(
-                      child: Text('등록된 활동이 없습니다. 아래 버튼으로 추가하세요.'),
+                      child: Text(
+                        '등록된 활동이 없습니다. 우측 하단 「활동목록 추가」 버튼을 눌러 주세요.',
+                      ),
                     )
                   else
                     ...types.map(
@@ -269,12 +291,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ),
                     ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: _showAddActivityDialog,
-                    icon: const Icon(Icons.add),
-                    label: const Text('새 활동 추가'),
-                  ),
+              ],
+            ),
+            Positioned(
+              right: 20,
+              bottom: 16,
+              child: FloatingActionButton.extended(
+                onPressed: _showAddActivityDialog,
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.onAccent,
+                icon: const Icon(Icons.add),
+                label: const Text('활동목록 추가'),
+              ),
+            ),
           ],
         ),
       ),

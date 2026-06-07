@@ -31,6 +31,8 @@ class ActivityRecords extends Table {
       text().references(ActivityTypes, #id, onDelete: KeyAction.restrict)();
   IntColumn get count => integer().withDefault(const Constant(1))();
   TextColumn get timeUnit => text().nullable()();
+  /// 활동 시각 (HH:mm). 일자(date)와 별도.
+  TextColumn get recordTime => text().nullable()();
   TextColumn get content => text().withDefault(const Constant(''))();
   DateTimeColumn get createdAt => dateTime()();
 
@@ -45,7 +47,7 @@ class AppDatabase extends _$AppDatabase {
   static const _uuid = Uuid();
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -66,6 +68,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 5) {
             await _applyDefaultTimeMeasureTypes();
+          }
+          if (from < 6) {
+            await migrator.addColumn(activityRecords, activityRecords.recordTime);
           }
         },
       );
@@ -224,6 +229,7 @@ class AppDatabase extends _$AppDatabase {
     required int count,
     required String content,
     ActivityTimeUnit? timeUnit,
+    String? recordTime,
   }) async {
     final typeRow = await (select(activityTypes)
           ..where((table) => table.id.equals(activityTypeId)))
@@ -249,6 +255,7 @@ class AppDatabase extends _$AppDatabase {
         activityTypeId: activityTypeId,
         count: Value(count),
         timeUnit: Value(storedTimeUnit),
+        recordTime: Value(recordTime),
         content: Value(content.trim()),
         createdAt: createdAt,
       ),
@@ -264,6 +271,7 @@ class AppDatabase extends _$AppDatabase {
       createdAt: createdAt,
       measureType: measureType,
       timeUnit: ActivityTimeUnit.fromStorage(storedTimeUnit),
+      recordTime: recordTime,
     );
   }
 
@@ -340,6 +348,7 @@ class AppDatabase extends _$AppDatabase {
 
     query.orderBy([
       OrderingTerm.asc(activityRecords.date),
+      OrderingTerm.asc(activityRecords.recordTime),
       OrderingTerm.asc(activityTypes.sortOrder),
     ]);
 
@@ -362,6 +371,7 @@ class AppDatabase extends _$AppDatabase {
               createdAt: recordRow.createdAt,
               measureType: measureType,
               timeUnit: ActivityTimeUnit.fromStorage(recordRow.timeUnit),
+              recordTime: recordRow.recordTime,
             );
           },
         )
@@ -375,6 +385,7 @@ class AppDatabase extends _$AppDatabase {
     required String content,
     ActivityTimeUnit? timeUnit,
     ActivityMeasureType? measureType,
+    String? recordTime,
   }) async {
     final normalizedDate = DateTime(date.year, date.month, date.day);
     final storedTimeUnit = measureType == ActivityMeasureType.time
@@ -388,6 +399,7 @@ class AppDatabase extends _$AppDatabase {
         date: Value(normalizedDate),
         count: Value(count),
         timeUnit: storedTimeUnit,
+        recordTime: Value(recordTime),
         content: Value(content.trim()),
       ),
     );
@@ -437,6 +449,7 @@ class AppDatabase extends _$AppDatabase {
               activityTypeId: row.activityTypeId,
               count: row.count,
               timeUnit: row.timeUnit,
+              recordTime: row.recordTime,
               content: row.content,
               createdAt: row.createdAt,
             ),
@@ -480,6 +493,7 @@ class AppDatabase extends _$AppDatabase {
                     activityTypeId: record.activityTypeId,
                     count: Value(record.count),
                     timeUnit: Value(record.timeUnit),
+                    recordTime: Value(record.recordTime),
                     content: Value(record.content),
                     createdAt: record.createdAt,
                   ),
@@ -527,6 +541,7 @@ class BackupActivityRecord {
     required this.content,
     required this.createdAt,
     this.timeUnit,
+    this.recordTime,
   });
 
   final String id;
@@ -534,6 +549,7 @@ class BackupActivityRecord {
   final String activityTypeId;
   final int count;
   final String? timeUnit;
+  final String? recordTime;
   final String content;
   final DateTime createdAt;
 }

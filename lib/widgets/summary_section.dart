@@ -109,7 +109,10 @@ class _DetailItemCard extends StatelessWidget {
               Text(
                 item.measureType == ActivityMeasureType.time
                     ? formatTotalTimeValue(item.totalCount)
-                    : '${item.totalCount}회',
+                    : formatCountValue(
+                        item.totalCount,
+                        activityTypeName: item.activityTypeName,
+                      ),
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                       fontSize: 20,

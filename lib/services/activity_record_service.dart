@@ -14,6 +14,7 @@ class ActivityRecordService {
     required int count,
     required String content,
     ActivityTimeUnit? timeUnit,
+    String? recordTime,
   }) {
     return _database.insertActivityRecord(
       date: date,
@@ -21,6 +22,7 @@ class ActivityRecordService {
       count: count,
       content: content,
       timeUnit: timeUnit,
+      recordTime: recordTime,
     );
   }
 
@@ -47,6 +49,7 @@ class ActivityRecordService {
     required String content,
     ActivityTimeUnit? timeUnit,
     ActivityMeasureType? measureType,
+    String? recordTime,
   }) {
     return _database.updateActivityRecord(
       id: id,
@@ -55,6 +58,7 @@ class ActivityRecordService {
       content: content,
       timeUnit: timeUnit,
       measureType: measureType,
+      recordTime: recordTime,
     );
   }
 

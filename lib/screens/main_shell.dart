@@ -6,7 +6,6 @@ import 'activity_detail_screen.dart';
 import 'inquiry_screen.dart';
 import 'record_screen.dart';
 import 'settings_screen.dart';
-import '../providers/backup_provider.dart';
 import '../providers/navigation_provider.dart';
 
 class MainShell extends ConsumerWidget {
@@ -62,36 +61,11 @@ class MainShell extends ConsumerWidget {
   }
 }
 
-class AppRoot extends ConsumerStatefulWidget {
+class AppRoot extends ConsumerWidget {
   const AppRoot({super.key});
 
   @override
-  ConsumerState<AppRoot> createState() => _AppRootState();
-}
-
-class _AppRootState extends ConsumerState<AppRoot> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      ref.read(backupServiceProvider).writeBackup();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return const MainShell();
   }
 }

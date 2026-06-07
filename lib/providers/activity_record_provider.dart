@@ -128,6 +128,7 @@ class RecordSaveNotifier extends AsyncNotifier<void> {
     required int count,
     required String content,
     ActivityTimeUnit? timeUnit,
+    String? recordTime,
   }) async {
     state = const AsyncLoading();
 
@@ -138,6 +139,7 @@ class RecordSaveNotifier extends AsyncNotifier<void> {
             count: count,
             content: content,
             timeUnit: timeUnit,
+            recordTime: recordTime,
           );
       await scheduleDataBackup(ref);
       state = const AsyncData(null);

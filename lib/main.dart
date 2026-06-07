@@ -15,8 +15,12 @@ Future<void> main() async {
   await initializeDateFormatting('ko_KR');
 
   final database = AppDatabase();
-  await BackupService(database).tryRestoreFromPersistentBackupIfNeeded();
-  await BackupService(database).writeBackup();
+  final backupService = BackupService(database);
+  await backupService.tryRestoreFromPersistentBackupIfNeeded();
+  // 재설치 직후 빈 DB로 공용 백업을 덮어쓰지 않도록, 기록이 있을 때만 갱신
+  if (await database.activityRecordCount() > 0) {
+    await backupService.writeBackup();
+  }
 
   runApp(
     ProviderScope(

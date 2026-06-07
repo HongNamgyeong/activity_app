@@ -28,6 +28,10 @@ class BackupService {
 
   static const _backupVersion = 1;
 
+  /// 복원 중·직후에는 공용 백업 파일을 만들지 않습니다.
+  static bool _restoreInProgress = false;
+  static DateTime? _suppressPublicWriteUntil;
+
   Future<File?> _localBackupFile() async {
     final dir = await getApplicationDocumentsDirectory();
     return File(p.join(dir.path, AppConstants.backupFileName));
@@ -85,23 +89,40 @@ class BackupService {
       final snapshot = _decodeBackup(raw);
       if (snapshot == null) return;
 
-      final localCount = await _database.activityRecordCount();
-      final backupCount = snapshot.records.length;
-
-      if (backupCount == 0 || localCount >= backupCount) {
+      if (!await _shouldImportBackup(snapshot)) {
         return;
       }
 
+      final localCount = await _database.activityRecordCount();
       await _database.importBackupData(snapshot);
       debugPrint(
-        'BackupService: auto-restored $backupCount records (local had $localCount)',
+        'BackupService: auto-restored ${snapshot.records.length} records '
+        '(local had $localCount)',
       );
     } catch (error, stackTrace) {
       debugPrint('BackupService auto restore failed: $error\n$stackTrace');
     }
   }
 
+  /// 재설치 직후(기록 없음)이거나 백업이 더 많을 때 복원합니다.
+  Future<bool> _shouldImportBackup(AppDataBackup snapshot) async {
+    if (snapshot.types.isEmpty) return false;
+
+    final localRecords = await _database.activityRecordCount();
+    final backupRecords = snapshot.records.length;
+
+    if (backupRecords > 0 && localRecords == 0) {
+      return true;
+    }
+    if (backupRecords > localRecords) {
+      return true;
+    }
+    return false;
+  }
+
   Future<BackupRestoreResult> restoreFromBackupFile({bool force = false}) async {
+    _restoreInProgress = true;
+    _suppressPublicWriteUntil = DateTime.now().add(const Duration(seconds: 5));
     try {
       final raw = await _readBackupContent();
       if (raw == null) {
@@ -117,30 +138,50 @@ class BackupService {
         return BackupRestoreResult.empty;
       }
 
-      final localCount = await _database.activityRecordCount();
-      final hasBackupRecords = snapshot.records.isNotEmpty;
-
-      if (!force &&
-          hasBackupRecords &&
-          localCount >= snapshot.records.length) {
+      if (!force && !await _shouldImportBackup(snapshot)) {
         return BackupRestoreResult.upToDate;
       }
 
       await _database.importBackupData(snapshot);
+      if (Platform.isAndroid) {
+        await AndroidPublicBackup.cleanupDuplicates();
+      }
       return BackupRestoreResult.restored;
     } catch (error, stackTrace) {
       debugPrint('BackupService restore failed: $error\n$stackTrace');
       return BackupRestoreResult.failed;
+    } finally {
+      _restoreInProgress = false;
     }
   }
 
   Future<DateTime?> writeBackup() async {
+    if (_restoreInProgress) {
+      return null;
+    }
+    if (_suppressPublicWriteUntil != null &&
+        DateTime.now().isBefore(_suppressPublicWriteUntil!)) {
+      return null;
+    }
+
+    final recordCount = await _database.activityRecordCount();
+    if (recordCount == 0) {
+      if (Platform.isAndroid && await AndroidPublicBackup.exists()) {
+        return lastBackupTime();
+      }
+      return null;
+    }
+
     final snapshot = await _database.exportBackupData();
     final exportedAt = DateTime.now().toUtc();
     final payload = _encodePayload(snapshot, exportedAt);
 
     final wrote = await _writeBackupContent(payload);
     if (!wrote) return null;
+
+    if (Platform.isAndroid) {
+      await AndroidPublicBackup.cleanupDuplicates();
+    }
 
     return exportedAt.toLocal();
   }
@@ -177,6 +218,7 @@ class BackupService {
               'activityTypeId': record.activityTypeId,
               'count': record.count,
               'timeUnit': record.timeUnit,
+              'recordTime': record.recordTime,
               'content': record.content,
               'createdAt': record.createdAt.toIso8601String(),
             },
@@ -227,6 +269,7 @@ class BackupService {
       final content = item['content'] as String?;
       final createdAtRaw = item['createdAt'] as String?;
       final timeUnit = item['timeUnit'] as String?;
+      final recordTime = item['recordTime'] as String?;
       final date = dateRaw == null ? null : DateTime.tryParse(dateRaw);
       final createdAt =
           createdAtRaw == null ? null : DateTime.tryParse(createdAtRaw);
@@ -245,6 +288,7 @@ class BackupService {
           activityTypeId: activityTypeId,
           count: count,
           timeUnit: timeUnit,
+          recordTime: recordTime,
           content: content,
           createdAt: createdAt,
         ),

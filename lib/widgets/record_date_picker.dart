@@ -8,10 +8,12 @@ class RecordDatePicker extends StatelessWidget {
     super.key,
     required this.selectedDate,
     required this.onDateChanged,
+    this.compact = false,
   });
 
   final DateTime selectedDate;
   final ValueChanged<DateTime> onDateChanged;
+  final bool compact;
 
   static final _displayFormat = DateFormat('yyyy.MM.dd (E)', 'ko_KR');
 
@@ -85,12 +87,15 @@ class RecordDatePicker extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             onTap: () => _openPicker(context),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              padding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: compact ? 10 : 14,
+              ),
               child: Row(
                 children: [
                   Icon(
                     Icons.calendar_today_outlined,
-                    size: 20,
+                    size: compact ? 18 : 20,
                     color: AppColors.accent,
                   ),
                   const SizedBox(width: 12),
@@ -103,9 +108,10 @@ class RecordDatePicker extends StatelessWidget {
                           style:
                               Theme.of(context).textTheme.bodyLarge?.copyWith(
                                     fontWeight: FontWeight.w600,
+                                    fontSize: compact ? 15 : null,
                                   ),
                         ),
-                        if (_isToday)
+                        if (_isToday && !compact)
                           Text(
                             '오늘 날짜로 기록됩니다',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(

@@ -22,7 +22,7 @@ class DateRangePickerCard extends StatelessWidget {
   final VoidCallback onSearch;
   final bool isLoading;
 
-  static final _dateFormat = DateFormat('yyyy.MM.dd');
+  static final _dateFormat = DateFormat('yyyy.MM.dd (E)', 'ko_KR');
 
   Future<void> _pickDate(
     BuildContext context, {

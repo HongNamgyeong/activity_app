@@ -11,6 +11,7 @@ class ActivityRecord {
     required this.createdAt,
     this.measureType = ActivityMeasureType.count,
     this.timeUnit,
+    this.recordTime,
   });
 
   final String id;
@@ -22,4 +23,6 @@ class ActivityRecord {
   final DateTime createdAt;
   final ActivityMeasureType measureType;
   final ActivityTimeUnit? timeUnit;
+  /// 활동 시각 (HH:mm)
+  final String? recordTime;
 }

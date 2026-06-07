@@ -16,7 +16,6 @@ class ActivityDetailScreen extends ConsumerWidget {
   const ActivityDetailScreen({super.key});
 
   static final _dateFormat = DateFormat('yyyy.MM.dd');
-  static final _recordDateFormat = DateFormat('yyyy.MM.dd (E)', 'ko_KR');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -173,6 +172,8 @@ class ActivityDetailScreen extends ConsumerWidget {
     final contentController = TextEditingController(text: record.content);
     var count = record.count;
     var date = record.date;
+    var selectedTime =
+        parseClockTime(record.recordTime) ?? TimeOfDay.fromDateTime(record.date);
     var timeUnit = record.timeUnit ?? ActivityTimeUnit.minute;
     final isTimeType = detail.measureType == ActivityMeasureType.time;
 
@@ -199,7 +200,28 @@ class ActivityDetailScreen extends ConsumerWidget {
                       setDialogState(() => date = picked);
                     }
                   },
-                  child: Text(_recordDateFormat.format(date)),
+                  child: Text(formatRecordDateLabel(date)),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () async {
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: selectedTime,
+                      initialEntryMode: TimePickerEntryMode.input,
+                      builder: (context, child) {
+                        return MediaQuery(
+                          data: MediaQuery.of(context)
+                              .copyWith(alwaysUse24HourFormat: true),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (picked != null) {
+                      setDialogState(() => selectedTime = picked);
+                    }
+                  },
+                  child: Text('시각 ${formatClockTime(selectedTime)}'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -227,6 +249,7 @@ class ActivityDetailScreen extends ConsumerWidget {
                   CountStepper(
                     value: count,
                     min: 1,
+                    unitLabel: countUnitLabel(detail.activityTypeName),
                     onChanged: (value) => setDialogState(() => count = value),
                   ),
               ],
@@ -254,6 +277,7 @@ class ActivityDetailScreen extends ConsumerWidget {
               count: count,
               content: contentController.text,
               timeUnit: isTimeType ? timeUnit : null,
+              recordTime: formatClockTime(selectedTime),
             );
       } catch (error) {
         if (context.mounted) {
@@ -294,7 +318,7 @@ class _SummaryHeader extends StatelessWidget {
                   dateRange,
                   style: const TextStyle(
                     color: AppColors.headerTextMuted,
-                    fontSize: 13,
+                    fontSize: 15,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -326,7 +350,7 @@ class _SummaryHeader extends StatelessWidget {
                 TextSpan(
                   text: detail.totalCountLabel,
                   style: const TextStyle(
-                    fontSize: 22,
+                    fontSize: 28,
                     fontWeight: FontWeight.w700,
                     color: AppColors.headerHighlight,
                   ),
@@ -407,10 +431,14 @@ class _RecordCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  ActivityDetailScreen._recordDateFormat.format(record.date),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  formatRecordDateLabel(
+                    record.date,
+                    recordTime: record.recordTime,
+                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
                       ),
                 ),
               ),
@@ -420,8 +448,12 @@ class _RecordCard extends StatelessWidget {
                   count: record.count,
                   measureType: record.measureType,
                   timeUnit: record.timeUnit,
+                  activityTypeName: record.activityTypeName,
                 ),
-                style: Theme.of(context).textTheme.titleMedium,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
             ],
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
+import '../core/utils/activity_value_format.dart';
 import '../models/activity_measure_type.dart';
 import '../models/activity_type.dart';
 import '../providers/activity_record_provider.dart';
@@ -8,6 +9,7 @@ import '../providers/activity_type_provider.dart';
 import '../widgets/app_card.dart';
 import '../widgets/count_stepper.dart';
 import '../widgets/record_date_picker.dart';
+import '../widgets/record_time_picker.dart';
 import '../widgets/time_stepper.dart';
 
 class RecordScreen extends ConsumerStatefulWidget {
@@ -28,6 +30,7 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
   String? _selectedTypeId;
   int _count = 0;
   ActivityTimeUnit _timeUnit = ActivityTimeUnit.minute;
+  late TimeOfDay _selectedTime = TimeOfDay.fromDateTime(DateTime.now());
   final _contentController = TextEditingController();
 
   @override
@@ -89,6 +92,7 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
           timeUnit: selected.measureType == ActivityMeasureType.time
               ? _timeUnit
               : null,
+          recordTime: formatClockTime(_selectedTime),
         );
 
     if (!mounted) return;
@@ -131,105 +135,131 @@ class _RecordScreenState extends ConsumerState<RecordScreen> {
             selectedType?.measureType == ActivityMeasureType.time;
 
         return SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                '활동기록',
-                style: Theme.of(context).textTheme.headlineMedium,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                child: Text(
+                  '활동기록',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
               ),
-              const SizedBox(height: 20),
-              AppCard(
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                  child: AppCard(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        RecordDatePicker(
+                          compact: true,
+                          selectedDate: _selectedDate,
+                          onDateChanged: (date) =>
+                              setState(() => _selectedDate = date),
+                        ),
+                        const SizedBox(height: 12),
+                        RecordTimePicker(
+                          compact: true,
+                          selectedTime: _selectedTime,
+                          onTimeChanged: (time) =>
+                              setState(() => _selectedTime = time),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '활동 항목',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 6),
+                        _ActivityTypeDropdown(
+                          types: types,
+                          selectedId: effectiveTypeId,
+                          onChanged: (value) => _onTypeChanged(value, types),
+                        ),
+                        if (types.isEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            '설정에서 활동 목록을 먼저 추가해 주세요.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        Text(
+                          isTimeType ? '시간' : '횟수',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 6),
+                        if (isTimeType)
+                          TimeStepper(
+                            value: _count,
+                            timeUnit: _timeUnit,
+                            min: 0,
+                            onValueChanged: (value) =>
+                                setState(() => _count = value),
+                            onTimeUnitChanged: (unit) =>
+                                setState(() => _timeUnit = unit),
+                          )
+                        else
+                          CountStepper(
+                            value: _count,
+                            min: 0,
+                            compact: true,
+                            unitLabel: countUnitLabel(selectedType?.name),
+                            onChanged: (value) =>
+                                setState(() => _count = value),
+                          ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '활동 내용 및 비고',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: _contentController,
+                          minLines: 2,
+                          maxLines: 3,
+                          decoration: const InputDecoration(
+                            hintText: '활동에 대한 구체적인 내용을 입력하세요...',
+                            alignLabelWithHint: true,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    RecordDatePicker(
-                      selectedDate: _selectedDate,
-                      onDateChanged: (date) =>
-                          setState(() => _selectedDate = date),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '활동 항목',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 8),
-                    _ActivityTypeDropdown(
-                      types: types,
-                      selectedId: effectiveTypeId,
-                      onChanged: (value) => _onTypeChanged(value, types),
-                    ),
-                    if (types.isEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        '설정에서 활동 목록을 먼저 추가해 주세요.',
-                        style: Theme.of(context).textTheme.bodySmall,
+                    FilledButton.icon(
+                      onPressed: types.isEmpty ? null : () => _save(types),
+                      icon: const Icon(Icons.save_outlined, size: 20),
+                      label: const Text('활동 기록 저장'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                    ],
-                    const SizedBox(height: 20),
-                    Text(
-                      isTimeType ? '시간' : '횟수',
-                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                    const SizedBox(height: 8),
-                    if (isTimeType)
-                      TimeStepper(
-                        value: _count,
-                        timeUnit: _timeUnit,
-                        min: 0,
-                        onValueChanged: (value) =>
-                            setState(() => _count = value),
-                        onTimeUnitChanged: (unit) =>
-                            setState(() => _timeUnit = unit),
-                      )
-                    else
-                      CountStepper(
-                        value: _count,
-                        min: 0,
-                        compact: true,
-                        onChanged: (value) => setState(() => _count = value),
-                      ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 6),
                     Text(
-                      '활동 내용 및 비고',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _contentController,
-                      minLines: 4,
-                      maxLines: 8,
-                      decoration: const InputDecoration(
-                        hintText: '활동에 대한 구체적인 내용을 입력하세요...',
-                        alignLabelWithHint: true,
-                      ),
+                      '기록된 활동은 \'활동조회\' 탭에서 기간별로 모아볼 수 있습니다.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
+                            height: 1.3,
+                          ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: types.isEmpty ? null : () => _save(types),
-                icon: const Icon(Icons.save_outlined),
-                label: const Text('활동 기록 저장'),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 16,
-                    color: AppColors.textMuted.withValues(alpha: 0.8),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      '기록된 활동은 \'활동조회\' 탭에서 기간별로 모아볼 수 있습니다.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                ],
               ),
             ],
           ),

@@ -375,6 +375,17 @@ class $ActivityRecordsTable extends ActivityRecords
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _recordTimeMeta = const VerificationMeta(
+    'recordTime',
+  );
+  @override
+  late final GeneratedColumn<String> recordTime = GeneratedColumn<String>(
+    'record_time',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _contentMeta = const VerificationMeta(
     'content',
   );
@@ -405,6 +416,7 @@ class $ActivityRecordsTable extends ActivityRecords
     activityTypeId,
     count,
     timeUnit,
+    recordTime,
     content,
     createdAt,
   ];
@@ -456,6 +468,12 @@ class $ActivityRecordsTable extends ActivityRecords
         timeUnit.isAcceptableOrUnknown(data['time_unit']!, _timeUnitMeta),
       );
     }
+    if (data.containsKey('record_time')) {
+      context.handle(
+        _recordTimeMeta,
+        recordTime.isAcceptableOrUnknown(data['record_time']!, _recordTimeMeta),
+      );
+    }
     if (data.containsKey('content')) {
       context.handle(
         _contentMeta,
@@ -499,6 +517,10 @@ class $ActivityRecordsTable extends ActivityRecords
         DriftSqlType.string,
         data['${effectivePrefix}time_unit'],
       ),
+      recordTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}record_time'],
+      ),
       content: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}content'],
@@ -523,6 +545,9 @@ class ActivityRecordRow extends DataClass
   final String activityTypeId;
   final int count;
   final String? timeUnit;
+
+  /// 활동 시각 (HH:mm). 일자(date)와 별도.
+  final String? recordTime;
   final String content;
   final DateTime createdAt;
   const ActivityRecordRow({
@@ -531,6 +556,7 @@ class ActivityRecordRow extends DataClass
     required this.activityTypeId,
     required this.count,
     this.timeUnit,
+    this.recordTime,
     required this.content,
     required this.createdAt,
   });
@@ -543,6 +569,9 @@ class ActivityRecordRow extends DataClass
     map['count'] = Variable<int>(count);
     if (!nullToAbsent || timeUnit != null) {
       map['time_unit'] = Variable<String>(timeUnit);
+    }
+    if (!nullToAbsent || recordTime != null) {
+      map['record_time'] = Variable<String>(recordTime);
     }
     map['content'] = Variable<String>(content);
     map['created_at'] = Variable<DateTime>(createdAt);
@@ -558,6 +587,9 @@ class ActivityRecordRow extends DataClass
       timeUnit: timeUnit == null && nullToAbsent
           ? const Value.absent()
           : Value(timeUnit),
+      recordTime: recordTime == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recordTime),
       content: Value(content),
       createdAt: Value(createdAt),
     );
@@ -574,6 +606,7 @@ class ActivityRecordRow extends DataClass
       activityTypeId: serializer.fromJson<String>(json['activityTypeId']),
       count: serializer.fromJson<int>(json['count']),
       timeUnit: serializer.fromJson<String?>(json['timeUnit']),
+      recordTime: serializer.fromJson<String?>(json['recordTime']),
       content: serializer.fromJson<String>(json['content']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -587,6 +620,7 @@ class ActivityRecordRow extends DataClass
       'activityTypeId': serializer.toJson<String>(activityTypeId),
       'count': serializer.toJson<int>(count),
       'timeUnit': serializer.toJson<String?>(timeUnit),
+      'recordTime': serializer.toJson<String?>(recordTime),
       'content': serializer.toJson<String>(content),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -598,6 +632,7 @@ class ActivityRecordRow extends DataClass
     String? activityTypeId,
     int? count,
     Value<String?> timeUnit = const Value.absent(),
+    Value<String?> recordTime = const Value.absent(),
     String? content,
     DateTime? createdAt,
   }) => ActivityRecordRow(
@@ -606,6 +641,7 @@ class ActivityRecordRow extends DataClass
     activityTypeId: activityTypeId ?? this.activityTypeId,
     count: count ?? this.count,
     timeUnit: timeUnit.present ? timeUnit.value : this.timeUnit,
+    recordTime: recordTime.present ? recordTime.value : this.recordTime,
     content: content ?? this.content,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -618,6 +654,9 @@ class ActivityRecordRow extends DataClass
           : this.activityTypeId,
       count: data.count.present ? data.count.value : this.count,
       timeUnit: data.timeUnit.present ? data.timeUnit.value : this.timeUnit,
+      recordTime: data.recordTime.present
+          ? data.recordTime.value
+          : this.recordTime,
       content: data.content.present ? data.content.value : this.content,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
@@ -631,6 +670,7 @@ class ActivityRecordRow extends DataClass
           ..write('activityTypeId: $activityTypeId, ')
           ..write('count: $count, ')
           ..write('timeUnit: $timeUnit, ')
+          ..write('recordTime: $recordTime, ')
           ..write('content: $content, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -644,6 +684,7 @@ class ActivityRecordRow extends DataClass
     activityTypeId,
     count,
     timeUnit,
+    recordTime,
     content,
     createdAt,
   );
@@ -656,6 +697,7 @@ class ActivityRecordRow extends DataClass
           other.activityTypeId == this.activityTypeId &&
           other.count == this.count &&
           other.timeUnit == this.timeUnit &&
+          other.recordTime == this.recordTime &&
           other.content == this.content &&
           other.createdAt == this.createdAt);
 }
@@ -666,6 +708,7 @@ class ActivityRecordsCompanion extends UpdateCompanion<ActivityRecordRow> {
   final Value<String> activityTypeId;
   final Value<int> count;
   final Value<String?> timeUnit;
+  final Value<String?> recordTime;
   final Value<String> content;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
@@ -675,6 +718,7 @@ class ActivityRecordsCompanion extends UpdateCompanion<ActivityRecordRow> {
     this.activityTypeId = const Value.absent(),
     this.count = const Value.absent(),
     this.timeUnit = const Value.absent(),
+    this.recordTime = const Value.absent(),
     this.content = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -685,6 +729,7 @@ class ActivityRecordsCompanion extends UpdateCompanion<ActivityRecordRow> {
     required String activityTypeId,
     this.count = const Value.absent(),
     this.timeUnit = const Value.absent(),
+    this.recordTime = const Value.absent(),
     this.content = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
@@ -698,6 +743,7 @@ class ActivityRecordsCompanion extends UpdateCompanion<ActivityRecordRow> {
     Expression<String>? activityTypeId,
     Expression<int>? count,
     Expression<String>? timeUnit,
+    Expression<String>? recordTime,
     Expression<String>? content,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
@@ -708,6 +754,7 @@ class ActivityRecordsCompanion extends UpdateCompanion<ActivityRecordRow> {
       if (activityTypeId != null) 'activity_type_id': activityTypeId,
       if (count != null) 'count': count,
       if (timeUnit != null) 'time_unit': timeUnit,
+      if (recordTime != null) 'record_time': recordTime,
       if (content != null) 'content': content,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
@@ -720,6 +767,7 @@ class ActivityRecordsCompanion extends UpdateCompanion<ActivityRecordRow> {
     Value<String>? activityTypeId,
     Value<int>? count,
     Value<String?>? timeUnit,
+    Value<String?>? recordTime,
     Value<String>? content,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
@@ -730,6 +778,7 @@ class ActivityRecordsCompanion extends UpdateCompanion<ActivityRecordRow> {
       activityTypeId: activityTypeId ?? this.activityTypeId,
       count: count ?? this.count,
       timeUnit: timeUnit ?? this.timeUnit,
+      recordTime: recordTime ?? this.recordTime,
       content: content ?? this.content,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
@@ -754,6 +803,9 @@ class ActivityRecordsCompanion extends UpdateCompanion<ActivityRecordRow> {
     if (timeUnit.present) {
       map['time_unit'] = Variable<String>(timeUnit.value);
     }
+    if (recordTime.present) {
+      map['record_time'] = Variable<String>(recordTime.value);
+    }
     if (content.present) {
       map['content'] = Variable<String>(content.value);
     }
@@ -774,6 +826,7 @@ class ActivityRecordsCompanion extends UpdateCompanion<ActivityRecordRow> {
           ..write('activityTypeId: $activityTypeId, ')
           ..write('count: $count, ')
           ..write('timeUnit: $timeUnit, ')
+          ..write('recordTime: $recordTime, ')
           ..write('content: $content, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
@@ -1104,6 +1157,7 @@ typedef $$ActivityRecordsTableCreateCompanionBuilder =
       required String activityTypeId,
       Value<int> count,
       Value<String?> timeUnit,
+      Value<String?> recordTime,
       Value<String> content,
       required DateTime createdAt,
       Value<int> rowid,
@@ -1115,6 +1169,7 @@ typedef $$ActivityRecordsTableUpdateCompanionBuilder =
       Value<String> activityTypeId,
       Value<int> count,
       Value<String?> timeUnit,
+      Value<String?> recordTime,
       Value<String> content,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -1185,6 +1240,11 @@ class $$ActivityRecordsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get recordTime => $composableBuilder(
+    column: $table.recordTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get content => $composableBuilder(
     column: $table.content,
     builder: (column) => ColumnFilters(column),
@@ -1248,6 +1308,11 @@ class $$ActivityRecordsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get recordTime => $composableBuilder(
+    column: $table.recordTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get content => $composableBuilder(
     column: $table.content,
     builder: (column) => ColumnOrderings(column),
@@ -1302,6 +1367,11 @@ class $$ActivityRecordsTableAnnotationComposer
 
   GeneratedColumn<String> get timeUnit =>
       $composableBuilder(column: $table.timeUnit, builder: (column) => column);
+
+  GeneratedColumn<String> get recordTime => $composableBuilder(
+    column: $table.recordTime,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get content =>
       $composableBuilder(column: $table.content, builder: (column) => column);
@@ -1368,6 +1438,7 @@ class $$ActivityRecordsTableTableManager
                 Value<String> activityTypeId = const Value.absent(),
                 Value<int> count = const Value.absent(),
                 Value<String?> timeUnit = const Value.absent(),
+                Value<String?> recordTime = const Value.absent(),
                 Value<String> content = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -1377,6 +1448,7 @@ class $$ActivityRecordsTableTableManager
                 activityTypeId: activityTypeId,
                 count: count,
                 timeUnit: timeUnit,
+                recordTime: recordTime,
                 content: content,
                 createdAt: createdAt,
                 rowid: rowid,
@@ -1388,6 +1460,7 @@ class $$ActivityRecordsTableTableManager
                 required String activityTypeId,
                 Value<int> count = const Value.absent(),
                 Value<String?> timeUnit = const Value.absent(),
+                Value<String?> recordTime = const Value.absent(),
                 Value<String> content = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
@@ -1397,6 +1470,7 @@ class $$ActivityRecordsTableTableManager
                 activityTypeId: activityTypeId,
                 count: count,
                 timeUnit: timeUnit,
+                recordTime: recordTime,
                 content: content,
                 createdAt: createdAt,
                 rowid: rowid,

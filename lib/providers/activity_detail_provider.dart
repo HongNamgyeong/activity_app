@@ -42,13 +42,19 @@ class ActivityDetailState {
 
   String get totalCountLabel => measureType == ActivityMeasureType.time
       ? formatTotalTimeValue(totalCount)
-      : '$totalCount회';
+      : formatCountValue(totalCount, activityTypeName: activityTypeName);
 
   List<ActivityRecord> get sortedRecords {
     final copy = List<ActivityRecord>.from(records);
     copy.sort((a, b) {
       final compare = a.date.compareTo(b.date);
-      return newestFirst ? -compare : compare;
+      if (compare != 0) {
+        return newestFirst ? -compare : compare;
+      }
+      final timeA = a.recordTime ?? '';
+      final timeB = b.recordTime ?? '';
+      final timeCompare = timeA.compareTo(timeB);
+      return newestFirst ? -timeCompare : timeCompare;
     });
     return copy;
   }
@@ -144,6 +150,7 @@ class ActivityDetailNotifier extends Notifier<ActivityDetailState> {
     required int count,
     required String content,
     ActivityTimeUnit? timeUnit,
+    String? recordTime,
   }) async {
     await ref.read(activityRecordServiceProvider).update(
           id: id,
@@ -152,6 +159,7 @@ class ActivityDetailNotifier extends Notifier<ActivityDetailState> {
           content: content,
           timeUnit: timeUnit,
           measureType: state.measureType,
+          recordTime: recordTime,
         );
     await scheduleDataBackup(ref);
     await reload();
