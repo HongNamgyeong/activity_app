@@ -44,18 +44,10 @@ class SummarySection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionTitle(
-          title: '활동 요약',
-          trailing: Text(
-            '총 ${summary.totalRecords}건',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.accent,
-                  fontWeight: FontWeight.w500,
-                ),
-          ),
+        Text(
+          '활동요약',
+          style: Theme.of(context).textTheme.titleLarge,
         ),
-        const SizedBox(height: 16),
-        Text('항목별 상세', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
         ...summary.items.map(
           (item) => Padding(

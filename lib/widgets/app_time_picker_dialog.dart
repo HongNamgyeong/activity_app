@@ -88,44 +88,12 @@ Future<_PickerOutcome?> _showDialPicker(
   final picked = await showDialog<TimeOfDay>(
     context: context,
     builder: (dialogContext) {
-      return AlertDialog(
-        title: const Text('활동 시각'),
-        content: SizedBox(
-          width: 320,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _StyleSelector(
-                selected: TimePickerStyle.dial,
-                onSelected: (style) {
-                  if (style == TimePickerStyle.wheel) {
-                    switchTo = TimePickerStyle.wheel;
-                    Navigator.of(dialogContext).pop();
-                  }
-                },
-              ),
-              const SizedBox(height: 12),
-              MediaQuery(
-                data: MediaQuery.of(dialogContext)
-                    .copyWith(alwaysUse24HourFormat: true),
-                child: Theme(
-                  data: Theme.of(dialogContext).copyWith(
-                    colorScheme: const ColorScheme.light(
-                      primary: AppColors.accent,
-                      onPrimary: AppColors.onAccent,
-                      surface: AppColors.surface,
-                      onSurface: AppColors.textPrimary,
-                    ),
-                  ),
-                  child: TimePickerDialog(
-                    initialTime: initialTime,
-                    initialEntryMode: TimePickerEntryMode.dialOnly,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+      return _DialTimePickerDialog(
+        initialTime: initialTime,
+        onSwitchToWheel: () {
+          switchTo = TimePickerStyle.wheel;
+          Navigator.of(dialogContext).pop();
+        },
       );
     },
   );
@@ -147,6 +115,82 @@ Future<_PickerOutcome?> _showWheelPicker(
     context: context,
     builder: (dialogContext) => _WheelTimePickerDialog(initialTime: initialTime),
   );
+}
+
+class _DialTimePickerDialog extends StatelessWidget {
+  const _DialTimePickerDialog({
+    required this.initialTime,
+    required this.onSwitchToWheel,
+  });
+
+  final TimeOfDay initialTime;
+  final VoidCallback onSwitchToWheel;
+
+  @override
+  Widget build(BuildContext context) {
+    final screen = MediaQuery.sizeOf(context);
+    final isCompact = screen.shortestSide < 600;
+    final maxPickerHeight = screen.height * (isCompact ? 0.58 : 0.65);
+    final maxPickerWidth = screen.width - 40;
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('활동 시각', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 12),
+            _StyleSelector(
+              selected: TimePickerStyle.dial,
+              onSelected: (style) {
+                if (style == TimePickerStyle.wheel) {
+                  onSwitchToWheel();
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: maxPickerWidth,
+                maxHeight: maxPickerHeight,
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topCenter,
+                child: MediaQuery(
+                  data: MediaQuery.of(context)
+                      .copyWith(alwaysUse24HourFormat: true),
+                  child: Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: const ColorScheme.light(
+                        primary: AppColors.accent,
+                        onPrimary: AppColors.onAccent,
+                        surface: AppColors.surface,
+                        onSurface: AppColors.textPrimary,
+                      ),
+                      timePickerTheme: TimePickerThemeData(
+                        hourMinuteTextStyle: TextStyle(
+                          fontSize: isCompact ? 40 : 48,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                    child: TimePickerDialog(
+                      initialTime: initialTime,
+                      initialEntryMode: TimePickerEntryMode.dialOnly,
+                      orientation: Orientation.portrait,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _WheelTimePickerDialog extends StatefulWidget {
@@ -172,10 +216,15 @@ class _WheelTimePickerDialogState extends State<_WheelTimePickerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screen = MediaQuery.sizeOf(context);
+    final isCompact = screen.shortestSide < 600;
+    final dialogWidth = (screen.width - 40).clamp(280.0, 360.0);
+
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       title: const Text('활동 시각'),
       content: SizedBox(
-        width: 320,
+        width: dialogWidth,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -194,7 +243,7 @@ class _WheelTimePickerDialogState extends State<_WheelTimePickerDialog> {
             ),
             const SizedBox(height: 16),
             SizedBox(
-              height: 220,
+              height: isCompact ? 180 : 220,
               child: CupertinoTheme(
                 data: const CupertinoThemeData(
                   primaryColor: AppColors.accent,

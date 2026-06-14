@@ -9,6 +9,7 @@ import '../models/activity_measure_type.dart';
 import '../models/activity_record.dart' as models;
 import '../models/activity_summary.dart';
 import '../models/activity_type.dart' as models;
+import '../models/legio_meeting_schedule.dart';
 
 part 'app_database.g.dart';
 
@@ -546,11 +547,17 @@ class AppDataBackup {
     required this.exportedAt,
     required this.types,
     required this.records,
+    this.legioMeetingSchedule,
+    this.recordTimePickerStyle,
+    this.generalTimePickerStyle,
   });
 
   final DateTime exportedAt;
   final List<BackupActivityType> types;
   final List<BackupActivityRecord> records;
+  final LegioMeetingSchedule? legioMeetingSchedule;
+  final String? recordTimePickerStyle;
+  final String? generalTimePickerStyle;
 }
 
 class BackupActivityType {

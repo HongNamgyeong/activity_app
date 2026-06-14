@@ -7,7 +7,11 @@ import 'package:path_provider/path_provider.dart';
 
 import '../core/constants/app_constants.dart';
 import '../database/app_database.dart';
+import '../models/legio_meeting_schedule.dart';
+import '../models/time_picker_style.dart';
 import 'android_public_backup.dart';
+import 'legio_meeting_preferences_service.dart';
+import 'time_picker_preferences_service.dart';
 
 enum BackupRestoreResult {
   restored,
@@ -95,6 +99,7 @@ class BackupService {
 
       final localCount = await _database.activityRecordCount();
       await _database.importBackupData(snapshot);
+      await _restoreAppSettings(snapshot);
       debugPrint(
         'BackupService: auto-restored ${snapshot.records.length} records '
         '(local had $localCount)',
@@ -143,6 +148,7 @@ class BackupService {
       }
 
       await _database.importBackupData(snapshot);
+      await _restoreAppSettings(snapshot);
       if (Platform.isAndroid) {
         await AndroidPublicBackup.cleanupDuplicates();
       }
@@ -174,7 +180,20 @@ class BackupService {
 
     final snapshot = await _database.exportBackupData();
     final exportedAt = DateTime.now().toUtc();
-    final payload = _encodePayload(snapshot, exportedAt);
+    final legioMeetingSchedule = await LegioMeetingPreferencesService.load();
+    final recordTimePickerStyle = await TimePickerPreferencesService.loadStyle(
+      scope: TimePickerPreferenceScope.record,
+    );
+    final generalTimePickerStyle = await TimePickerPreferencesService.loadStyle(
+      scope: TimePickerPreferenceScope.general,
+    );
+    final payload = _encodePayload(
+      snapshot,
+      exportedAt,
+      legioMeetingSchedule: legioMeetingSchedule,
+      recordTimePickerStyle: recordTimePickerStyle,
+      generalTimePickerStyle: generalTimePickerStyle,
+    );
 
     final wrote = await _writeBackupContent(payload);
     if (!wrote) return null;
@@ -196,10 +215,42 @@ class BackupService {
     }
   }
 
-  String _encodePayload(AppDataBackup snapshot, DateTime exportedAt) {
+  Future<void> _restoreAppSettings(AppDataBackup snapshot) async {
+    if (snapshot.legioMeetingSchedule != null) {
+      await LegioMeetingPreferencesService.save(snapshot.legioMeetingSchedule!);
+    }
+
+    if (snapshot.recordTimePickerStyle != null) {
+      await TimePickerPreferencesService.saveStyle(
+        TimePickerStyle.fromStorage(snapshot.recordTimePickerStyle),
+        scope: TimePickerPreferenceScope.record,
+      );
+    }
+
+    if (snapshot.generalTimePickerStyle != null) {
+      await TimePickerPreferencesService.saveStyle(
+        TimePickerStyle.fromStorage(snapshot.generalTimePickerStyle),
+        scope: TimePickerPreferenceScope.general,
+      );
+    }
+  }
+
+  String _encodePayload(
+    AppDataBackup snapshot,
+    DateTime exportedAt, {
+    LegioMeetingSchedule? legioMeetingSchedule,
+    TimePickerStyle? recordTimePickerStyle,
+    TimePickerStyle? generalTimePickerStyle,
+  }) {
     return const JsonEncoder.withIndent('  ').convert({
       'version': _backupVersion,
       'exportedAt': exportedAt.toIso8601String(),
+      if (legioMeetingSchedule != null)
+        'legioMeetingSchedule': legioMeetingSchedule.toJson(),
+      if (recordTimePickerStyle != null)
+        'recordTimePickerStyle': recordTimePickerStyle.storageValue,
+      if (generalTimePickerStyle != null)
+        'generalTimePickerStyle': generalTimePickerStyle.storageValue,
       'activityTypes': snapshot.types
           .map(
             (type) => {
@@ -295,10 +346,19 @@ class BackupService {
       );
     }
 
+    LegioMeetingSchedule? legioMeetingSchedule;
+    final legioJson = decoded['legioMeetingSchedule'];
+    if (legioJson is Map<String, dynamic>) {
+      legioMeetingSchedule = LegioMeetingSchedule.fromJson(legioJson);
+    }
+
     return AppDataBackup(
       exportedAt: exportedAt,
       types: types,
       records: records,
+      legioMeetingSchedule: legioMeetingSchedule,
+      recordTimePickerStyle: decoded['recordTimePickerStyle'] as String?,
+      generalTimePickerStyle: decoded['generalTimePickerStyle'] as String?,
     );
   }
 }

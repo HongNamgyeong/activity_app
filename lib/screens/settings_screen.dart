@@ -90,6 +90,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       switch (result) {
         case BackupRestoreResult.restored:
           await ref.read(activityTypesProvider.notifier).refresh();
+          await ref.read(legioMeetingScheduleProvider.notifier).load();
+          final legioSchedule = ref.read(legioMeetingScheduleProvider);
+          if (legioSchedule != null) {
+            ref
+                .read(inquiryProvider.notifier)
+                .applyLegioSchedule(legioSchedule);
+          }
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('백업에서 데이터를 복원했습니다.')),
@@ -262,29 +269,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                             const SizedBox(width: 14),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '레지오 주회시간',
-                                    style:
-                                        Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    legioSchedule?.displayLabel ??
-                                        '요일과 시간을 설정해 주세요',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                          color: legioSchedule == null
-                                              ? AppColors.textMuted
-                                              : AppColors.accent,
-                                        ),
-                                  ),
-                                ],
-                              ),
+                              child: legioSchedule == null
+                                  ? Text(
+                                      '요일과 시간을 설정해 주세요',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: AppColors.textMuted,
+                                          ),
+                                    )
+                                  : Text(
+                                      legioSchedule.displayLabel,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.accent,
+                                          ),
+                                    ),
                             ),
                             Icon(
                               Icons.chevron_right,
